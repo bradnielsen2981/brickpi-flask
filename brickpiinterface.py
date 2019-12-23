@@ -2,8 +2,10 @@ import brickpi3 # import the BrickPi3 drivers
 import time
 import sys
 import logging
+from di_sensors.temp_hum_press import TempHumPress
 
-log = logging.getLogger('app') #if a log has been created this will get it
+#will get a log from the Flask App if its been created
+log = logging.getLogger('app') 
 
 #Created a Class to wrap the robot functionality, one of the features is idea of keeping track of the current command, this is important when more than one process is running...
 class Robot():
@@ -12,6 +14,7 @@ class Robot():
     def __init__(self):
         self.CurrentCommand = "none"
         self.BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class
+        self.thp = TempHumPress() #not sure how you state the port
         bp = self.BP
         self.rightmotor = bp.PORT_A
         self.leftmotor = bp.PORT_B
@@ -26,7 +29,7 @@ class Robot():
         bp.set_sensor_type(self.ultra, bp.SENSOR_TYPE.EV3_ULTRASONIC_CM)
         
         self.gyro = bp.PORT_3 #Gyro Sensor
-        self.gyroanglecorrect = 0.9 #The distance the Gyro is from the rotational axis needs to be accouted for
+        self.gyroanglecorrect = 3/90 #there does need to be a angle adjustment based on angular momentum, which is affected by speed
         bp.set_sensor_type(self.gyro, bp.SENSOR_TYPE.EV3_GYRO_ABS_DPS)
         return
         
@@ -83,7 +86,6 @@ class Robot():
             time.sleep(0.05)
             bp.set_motor_power(self.rightmotor, -power)
             bp.set_motor_power(self.leftmotor, power)
-        print(currentdegrees)
         bp.set_motor_power(self.largemotors, 0) #stop
         self.CurrentCommand = 'none'
         return
@@ -103,18 +105,19 @@ class Robot():
         bp.set_motor_power(self.mediummotor, 0)
         return
 
+    #read temp and humidity from the I2C port, you need an I2C sensor
+    def get_temp_humidity_press_I2C(self):
+        temp = self.thp.get_temperature_celsius()
+        hum = self.thp.get_humidity()
+        press = self.thp.get_pressure()
+        time.sleep(0.02)
+        return(temp,hum,press) #return a tuple containing temp,hum,press
+
     #stop all motors and set command to stop
     def stop_all(self):
         bp = self.BP
         bp.set_motor_power(self.largemotors+self.mediummotor, 0)
         self.CurrentCommand = 'none'
-        return
-    
-    #I think this actually resets all the sensor configurations which is dangerous..once ports are set up
-    def reset_all(self):
-        self.CurrentCommand = 'none'
-        bp = self.BP
-        bp.reset_all()
         return
 
     #get the current voltage - need to work out how to determine battery life
@@ -123,8 +126,9 @@ class Robot():
 
     # call this function to turn off the motors and exit safely.
     def safe_exit():
+        self.CurrentCommand = 'none'
         bp = self.BP
-        bp.stop_all()
+        bp.stop_all() #stop all motors
         bp.reset_all() # Unconfigure the sensors, disable the motors
         sys.exit()
     
@@ -132,9 +136,11 @@ class Robot():
 #Only execute if this is the main file, good for testing code
 if __name__ == '__main__':
     robot = Robot()
-    time.sleep(1) #You need to allow time for the Ports to be setup!!!!
+    time.sleep(2) #You need to allow time for the ports to be setup, i think.. otherwise sensor errors occur
+    print(robot.get_temp_humidity_press_I2C())
     if robot.get_battery() > 7:
-        robot.rotate_power_degrees(20, 90)
+        robot.rotate_power_degrees(35, 180)
         robot.stop_all()
+        print(robot.get_battery())
     else:
         robot.safe_exit()

@@ -7,7 +7,8 @@
 import sqlite3
 import logging
 
-log = logging.getLogger('app') #if a log has been created this will get it
+#Will get a handle to the log of the Flask App if its been created
+log = logging.getLogger('app') 
 
 class DatabaseHelper():
 
