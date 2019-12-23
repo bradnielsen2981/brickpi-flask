@@ -26,6 +26,7 @@ class Robot():
         bp.set_sensor_type(self.ultra, bp.SENSOR_TYPE.EV3_ULTRASONIC_CM)
         
         self.gyro = bp.PORT_3 #Gyro Sensor
+        self.gyroanglecorrect = 0.9 #The distance the Gyro is from the rotational axis needs to be accouted for
         bp.set_sensor_type(self.gyro, bp.SENSOR_TYPE.EV3_GYRO_ABS_DPS)
         return
         
@@ -33,8 +34,7 @@ class Robot():
     def move_time_power(self, t, power):
         bp = self.BP #sick of writing self.BP all the time
         self.CurrentCommand = 'move_time_power' #this will be changed by the stop thread
-        elapsedtime = 0
-        start = time.time()
+        elapsedtime = 0; start = time.time()
         while elapsedtime < t and self.CurrentCommand == 'move_time_power':
             elapsedtime = time.time() - start
             bp.set_motor_power(self.largemotors, power)
@@ -48,7 +48,7 @@ class Robot():
         bp = self.BP
         self.CurrentCommand = 'move_power_untildistanceto'
         distancedetected = 300 # to set an inital distance detected before loop
-        elapsedtime = 0, start = time.time()
+        elapsedtime = 0;  start = time.time()
         #ultra sonic sensors can sometimes return 0
         while (distancedetected > distanceto or distancedetected == 0.0) and self.CurrentCommand == 'move_power_untildistanceto':
             bp.set_motor_power(self.largemotors, power)
@@ -74,16 +74,16 @@ class Robot():
         targetdegrees = currentdegrees + degrees
 
         #Complex code - need to reverse if statements based on left or right turn
-        symbol = '>' if degrees < 0 else symbol = '<'  #shorthand if statement
-        power = -(power) if degrees < 0
+        symbol = '>' if degrees < 0 else '<'  #shorthand if statement
+        power = -(power) if degrees < 0 else power
         expression = 'currentdegrees' + symbol + 'targetdegrees'
 
         while self.CurrentCommand == 'rotate_power_degrees' and eval(expression):
-            bp.set_motor_power(self.rightmotor, -power)
-            bp.set_motor_power(self.leftmotor, power)
             currentdegrees = bp.get_sensor(self.gyro)[0]
             time.sleep(0.05)
-            print(currentdegrees)
+            bp.set_motor_power(self.rightmotor, -power)
+            bp.set_motor_power(self.leftmotor, power)
+        print(currentdegrees)
         bp.set_motor_power(self.largemotors, 0) #stop
         self.CurrentCommand = 'none'
         return
@@ -120,14 +120,21 @@ class Robot():
     #get the current voltage - need to work out how to determine battery life
     def get_battery(self):
         return robot.BP.get_voltage_9v()
+
+    # call this function to turn off the motors and exit safely.
+    def safe_exit():
+        bp = self.BP
+        bp.stop_all()
+        bp.reset_all() # Unconfigure the sensors, disable the motors
+        sys.exit()
     
 #--------------------------------------------------------------------
 #Only execute if this is the main file, good for testing code
 if __name__ == '__main__':
     robot = Robot()
     time.sleep(1) #You need to allow time for the Ports to be setup!!!!
-    #robot.rotate_power_degrees(20, -90)
-    robot.reset_all()
-    robot.stop_all()
-    print(robot.get_battery)
-    
+    if robot.get_battery() > 7:
+        robot.rotate_power_degrees(20, 90)
+        robot.stop_all()
+    else:
+        robot.safe_exit()
