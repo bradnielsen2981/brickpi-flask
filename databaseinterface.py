@@ -28,11 +28,14 @@ class DatabaseHelper():
         connection = self.connect()
         result = None
         try:
-            cursor = connection.execute(query, params)
+            if params:
+                cursor = connection.execute(query, params)
+            else:
+                cursor = connection.execute(query)
             result = cursor.fetchall()  #returns a list of dictionaries
         except (sqlite3.OperationalError, sqlite3.Warning, sqlite3.Error) as e:
+            log.error("DATABASE ERROR: %s" % e)
             log.error(query) 
-            log.error("Database error: %s" % e)
         connection.close()
         return result #should be a list of dictionaries on success, else equals None
 
@@ -44,8 +47,8 @@ class DatabaseHelper():
         try:
             result = connection.execute(query, params)
         except (sqlite3.OperationalError, sqlite3.Warning, sqlite3.Error) as e:
+            log.error("DATABASE ERROR: %s" % e)
             log.error(query) 
-            log.error("Database error: %s" % e)
         connection.commit()
         connection.close()
         return result #Should be a true or false depending on success??
