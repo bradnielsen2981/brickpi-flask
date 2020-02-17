@@ -18,10 +18,4 @@ function draw_map(results) {
 //draw a specific event
 function draw_event(eventobj, index, array) {
     console.log(eventobj.eventtype);
-    if (eventobj.eventtype == 'forward'){
-        //draw forward function and pass event data
-        continue;
-    } else if (eventobj.eventtype == "rotate") {
-        continue;
-    }
 }

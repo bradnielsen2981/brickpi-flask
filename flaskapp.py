@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, redirect, request, session, flash
 import logging #allow loggings
 import time, sys, json
 import brickpiinterface #imports the grove functionality that you define
@@ -7,54 +7,92 @@ from datetime import datetime
 
 #Global Variables
 app = Flask(__name__)
+SECRET_KEY = 'my random key can be anything'
+app.config.from_object(__name__) #Set app configuration using above SETTINGS
 log = app.logger #sets up a log (log.info('message') or log.error('Testing'))
-robot = brickpiinterface.Robot()
+robot = brickpiinterface.Robot(app.logger)
 POWER = 30 #constant power/speed
 if robot.get_battery() < 6:
-    sys.exit()
-database = DatabaseHelper('firefighting.sqlite')
-CurrentCommand = "none"
+    robot.safe_exit()
+database = DatabaseHelper('test.sqlite')
 
+#Request Handlers ---------------------------------------------
+#home page and login
+@app.route('/', methods=['GET','POST'])
+def index():
+    if 'userid' in session:
+        return redirect('./home') #no form data is carried across using 'dot/'
+    if request.method == "POST":  #if form data has been sent
+        email = request.form['email']   #get the form field with the name 
+        password = request.form['password']
+        userdetails = database.ViewQueryHelper("SELECT * FROM users WHERE email=? AND password=?",(email,password))
+        if userdetails[0] != None:  #user exists
+            row = userdetails[0] #userdetails is a list of dictionaries
+            session['userid'] = row['userid']
+            session['username'] = row['username']
+            session['permission'] = row['permission']
+            return redirect('./home')
+        else:
+            flash("Sorry no user found, password or username incorrect")
+    else:
+        flash("No data submitted")
+    return render_template('index.html')
 
-#request handlers ---------------------------------------------
-@app.route('/')
+#home page
+@app.route('/home')
 def home():
     results = None
-    return render_template("index.html", data = None, voltage = robot.get_battery())
+    return render_template("home.html", data = results, voltage = robot.get_battery())
 
+#dhasboard
+@app.route('/dashboard')
+def dashboard():
+    results = None
+    #GET ALL STAT DATA AND SEND IT THROUGH
+    return render_template("dashboard.html", data = results, voltage = robot.get_battery())
+
+#map or table of fire and path data
 @app.route('/map')
 def map():
+    results = None
     return render_template('map.html')
 
 #start path finding
 @app.route('/start', methods=['GET','POST'])
 def start():
     robot.CurrentCommand = "start"
-    return jsonify({ "message":"starting" }) #jsonify take any type and makes a JSON 
+    duration = None
+    while (robot.CurrentCommand != "stop"):
+        duration = robot.move_power_untildistanceto(POWER,10)
+    return jsonify({ "message":"starting", "duration":duration }) #jsonify take any type and makes a JSON 
 
-#demonstrates how to get all the data from an SQLITE database
-@app.route('/getdata', methods=['GET','POST'])
-def getdata():
-    results = database.ViewQueryHelper("SELECT * FROM ???")
-    return jsonify([dict(row) for row in results]) #jsonify doesnt work with an SQLite.Row Object
+#creates a route to get all the event data
+@app.route('/getallusers', methods=['GET','POST'])
+def getallusers():
+    results = database.ViewQueryHelper("SELECT * FROM users")
+    return jsonify([dict(row) for row in results]) #jsonify doesnt work with an SQLite.Row
 
 #returns what the robot is currently doing
 @app.route('/getcurrentcommand', methods=['GET','POST'])
 def getcurrentcommand():
     return jsonify({"currentcommand":robot.CurrentCommand})
 
-#stop robot
+#stop current process
 @app.route('/stop', methods=['GET','POST'])
 def stop():
     robot.CurrentCommand = "stop"
     robot.stop_all()
     return jsonify({ "message":"stopping" })
 
-#Get temperature calues
-@app.route('/gettemphumidity', methods=['GET','POST'])
-def gettemphumidity():
-    temp = None; humidity = None
-    return jsonify({ "Temperature":temp, "Humidity":humidity })
+#get all stats
+@app.route('/getallstats', methods=['GET','POST'])
+def getallstats():
+    battery = robot.get_battery()
+    gyro = robot.get_gyro_sensor()
+    colour = robot.get_colour_sensor()
+    ultra = robot.get_ultra_sensor()
+    thermal = robot.get_thermal_sensor(True)
+    return jsonify({ "battery":battery, "gyro":gyro, "ultra":ultra, "colour":colour, "thermal":thermal })
 
 #Shutdown the web server
 @app.route('/shutdown', methods=['GET','POST'])

@@ -19,8 +19,8 @@ function JSONrequest(urlstring, methodstring, responsehandler=defaulthandler, pa
     });
 }
 
-//function responsehandler, receives the results object which has been converted from JSON
+//function responsehandler, by default receives the results object which has been converted from JSON
 function defaulthandler(result)
 {
-    document.getElementById('message').innerHTML = result.message;
+    console.log(result.message);
 }

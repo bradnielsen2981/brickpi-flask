@@ -3,17 +3,19 @@ import time
 import sys
 import logging
 import threading #the Thermal Sensor needs a thread, this could be started by Flask
-
 #from di_sensors.temp_hum_press import TempHumPress
-logger = None
-#logger = logging.getLogger('app') #will attempt to get Flask log
+
 
 #Created a Class to wrap the robot functionality, one of the features is idea of keeping track of the CurrentCommand, this is important when more than one process is running...
 class Robot():
 
     #use the init method to define your configuration
-    def __init__(self):
-        self.BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class
+    def __init__(self, log=None):
+        self.BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3
+        if log != None:
+            self.logger = log
+        else:
+            self.logger = logging.getLogger(__name__)
         bp = self.BP
         self.rightmotor = bp.PORT_A
         self.leftmotor = bp.PORT_B
@@ -28,13 +30,13 @@ class Robot():
         bp.set_sensor_type(self.gyro, bp.SENSOR_TYPE.EV3_GYRO_ABS_DPS)
         self.ultra = bp.PORT_4 #UltraSonic Senor
         bp.set_sensor_type(self.ultra, bp.SENSOR_TYPE.EV3_ULTRASONIC_CM)
-        time.sleep(3) #you need to delay or else sensors are not configured!!!'''
+        self.thermal_thread = None #for later thread
+        time.sleep(4) #you need to delay or else sensors are not configured!!!'''
         self.CurrentCommand = "loaded"
-
-        '''self.thermal_thread = threading.Thread(target=self.update_thermal_sensor_thread, args=(1,))
+        self.thermal_thread = threading.Thread(target=self.update_thermal_sensor_thread, args=(1,))
         self.thermal_thread.daemon = True
-        self.thermal_thread.start()'''
-
+        self.thermal_thread.start()
+        self.logger.info("Configuration Loaded...")
         return
 
     #get the current voltage - need to work out how to determine battery life
@@ -49,7 +51,7 @@ class Robot():
             degrees = bp.get_sensor(self.gyro)[0]
             time.sleep(0.01)
         except brickpi3.SensorError as error:
-            print("GYRO: " + str(error))
+            self.logger.error("GYRO: " + str(error))
             self.CurrentCommand = "stop"
         return degrees
 
@@ -61,7 +63,7 @@ class Robot():
             distance = bp.get_sensor(self.ultra)
             time.sleep(0.3)
         except brickpi3.SensorError as error:
-            print("ULTRASONIC: " + str(error))
+            self.logger.error("ULTRASONIC: " + str(error))
             self.CurrentCommand = "stop"
         return distance
 
@@ -73,8 +75,7 @@ class Robot():
             press = self.thp.get_pressure()
             time.sleep(0.01)
         except brickpi3.SensorError as error:
-            print(error)
-            #print("TEMPHUMPRESSURE: " + str(error))
+            self.logger.error("TEMP HUMIDY PRESSURE: " + str(error))
             return (0,0,0)
         return(temp,hum,press) #return a tuple containing temp,hum,press'''
 
@@ -87,13 +88,13 @@ class Robot():
             value = bp.get_sensor(self.colour) 
             time.sleep(0.01)
         except brickpi3.SensorError as error:
-            print("COLOUR: " + str(error))    
+            self.logger.error("COLOUR: " + str(error))    
         return colours[value]
 
     #updates the thermal sensor by making continual I2C transactions through a thread
     def update_thermal_sensor_thread(self, name):
         bp = self.BP
-        print("Starting Thread - thermal sensor i2c transactions")
+        self.logger.info("Starting Thread - thermal sensor i2c transactions")
         TIR_I2C_ADDR        = 0x0E      # TIR I2C device address 
         TIR_AMBIENT         = 0x00      # Ambient Temp
         TIR_OBJECT          = 0x01      # Object Temp
@@ -104,13 +105,13 @@ class Robot():
         while self.CurrentCommand != "exit":
             try:
                 bp.transact_i2c(self.thermal, TIR_I2C_ADDR, [TIR_OBJECT], 2)
-                time.sleep(1)
+                time.sleep(0.01)
             except brickpi3.SensorError as error:
-                print("THERMAL: " + str(error))
-        print("Ending Thread - thermal sensor i2c transactions")
+                self.logger.error("THERMAL: " + str(error))
+        self.logger.info("Ending Thread - thermal sensor i2c transactions")
         return
 
-    #return the infrared temperature
+    #return the infrared temperature - this seems to work but im sceptical
     def get_thermal_sensor(self, usethread=False):
         bp = self.BP
         temp = 0
@@ -123,7 +124,7 @@ class Robot():
             temp = temp * 0.02 - 0.01                  # Converting to Celcius
             temp = temp - 273.15                       
         except brickpi3.SensorError as error:
-            print("THERMAL: " + str(error))
+            self.logger.error("THERMAL: " + str(error))
         return float("%3.f" % temp)
 
     #updates the thermal sensor by making a single I2C transaction
@@ -140,7 +141,7 @@ class Robot():
             bp.transact_i2c(self.thermal, TIR_I2C_ADDR, [TIR_OBJECT], 2)
             time.sleep(0.01)
         except brickpi3.SensorError as error:
-            print("THERMAL: " + str(error))
+            self.logger.error("THERMAL: " + str(error))
         return
 
     #disable thermal sensor
@@ -152,28 +153,27 @@ class Robot():
     #------MOTOR COMMANDS--------#
     def move_power(self, power):
         bp = self.BP
+        self.CurrentCommand = "move"
         if self.CurrentCommand != "stop":
             self.BP.set_motor_power(self.largemotors, power)
         else:
             self.BP.set_motor_power(self.largemotors, 0)
         return
 
-
     #moves for the specified time (seconds) and power - use negative power to reverse
     def move_time_power(self, t, power):
         bp = self.BP
-        if self.CurrentCommand != "stop":
-           self.CurrentCommand = "move"
+        self.CurrentCommand = "movepower"
         target = time.time() + t
         while time.time() < target and self.CurrentCommand != "stop":
             bp.set_motor_power(self.largemotors, power)
+        self.CurrentCommand = "stop"
         self.BP.set_motor_power(self.largemotors, 0)
         return
     
     #moves with power until obstruction and return time travelled
     def move_power_untildistanceto(self, power, distanceto):
-        if self.CurrentCommand != "stop":
-           self.CurrentCommand = "moveuntil"
+        self.CurrentCommand = "moveuntil"
         bp = self.BP
         distancedetected = 300 # to set an inital distance detected before loop
         elapsedtime = 0;  start = time.time()
@@ -181,14 +181,15 @@ class Robot():
         bp.set_motor_power(self.largemotors, power)
         while (distancedetected > distanceto or distancedetected == 0.0) and (self.CurrentCommand != "stop"):
             distancedetected = self.get_ultra_sensor()
+            self.logger.info("MOVING - Distance detected: " + str(distancedetected))
+        self.CurrentCommand = "stop"
         elapsedtime = time.time() - start
         bp.set_motor_power(self.largemotors, 0)
         return elapsedtime
         
     #Rotates the robot with power and degrees. negative degrees = left. 
     def rotate_power_degrees(self, power, degrees):
-        if self.CurrentCommand != "stop":
-           self.CurrentCommand = "rotate"
+        self.CurrentCommand = "rotate"
         bp = self.BP
         currentdegrees = self.get_gyro_sensor()
         targetdegrees = currentdegrees + degrees
@@ -199,15 +200,15 @@ class Robot():
         while eval(expression) and self.CurrentCommand != "stop":
             bp.set_motor_power(self.rightmotor, -power)
             bp.set_motor_power(self.leftmotor, power)
-            print("Gyro degrees remaining: " + str(targetdegrees - currentdegrees))
+            self.logger.info("ROTATING - Gyro degrees remaining: " + str(targetdegrees - currentdegrees))
             currentdegrees = self.get_gyro_sensor()
+        self.CurrentCommand = "stop"
         bp.set_motor_power(self.largemotors, 0) #stop
         return
 
     #moves the target class to the target degrees
     def move_claw_targetdegrees(self, targetdegrees):
-        if self.CurrentCommand != "stop":
-           self.CurrentCommand = "grab"
+        self.CurrentCommand = "grab"
         bp = self.BP
         targetdegrees = targetdegrees * 6 #rotation of motor needs to be calibrated to angles via a constant 
         bp.offset_motor_encoder(self.mediummotor, bp.get_motor_encoder(self.mediummotor)) #reset encoder C to take into account current degree of turn - which is by default 0
@@ -216,7 +217,13 @@ class Robot():
         while current != targetdegrees and self.CurrentCommand != "stop":
             bp.set_motor_position(self.mediummotor, targetdegrees)
             current = bp.get_motor_encoder(self.mediummotor) #ACCURACY PROBLEM
+        self.CurrentCommand = "stop"
         bp.set_motor_power(self.mediummotor, 0)
+        return
+
+    #log out whatever
+    def log(self, message):
+        self.logger.info(message)
         return
 
     #stop all motors and set command to stop
@@ -231,24 +238,26 @@ class Robot():
     def safe_exit(self):
         bp = self.BP
         self.stop_all() #stop all motors
-        print("Exiting")
+        self.logger.info("Exiting")
         bp.reset_all() # Unconfigure the sensors, disable the motors
         exit()
         return
-   
+    
 #--------------------------------------------------------------------
 #Only execute if this is the main file, good for testing code
 if __name__ == '__main__':
-    logger = logging.getLogger(__name__)
     robot = Robot()
-    #robot.disable_thermal_sensor() 
+    robot.move_power_untildistanceto(30,10)
     robot.rotate_power_degrees(30,-90)
-    target = time.time() + 20
+    target = time.time() + 10
     while time.time() < target:
-        print("Battery: ",robot.get_battery())
-        print("Gyro: ",robot.get_gyro_sensor())
-        print("Colour: ",robot.get_colour_sensor())
-        print("Ultra: ",robot.get_ultra_sensor())
-        #print("Thermal: ",robot.get_thermal_sensor()) 
-    robot.CurrentCommand = "stop"   
+        robot.log("Battery: " + str(robot.get_battery()))
+        robot.log("Gyro: " + str(robot.get_gyro_sensor()))
+        robot.log("Colour: " + str(robot.get_colour_sensor()))
+        robot.log("Ultra: " + str(robot.get_ultra_sensor()))
+        robot.log("Thermal: " + str(robot.get_thermal_sensor(True))) 
+    robot.CurrentCommand = "stop" 
     robot.safe_exit()
+
+    #robot.disable_thermal_sensor() -- could also enable and disable thermal sensor when needed
+
