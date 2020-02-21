@@ -44,12 +44,16 @@ def home():
     results = None
     return render_template("home.html", data = results, voltage = robot.get_battery())
 
-#dhasboard
+#dashboard
 @app.route('/dashboard')
 def dashboard():
-    results = None
-    #GET ALL STAT DATA AND SEND IT THROUGH
-    return render_template("dashboard.html", data = results, voltage = robot.get_battery())
+    return render_template("dashboard.html")
+
+#get all stats and return through JSON
+@app.route('/getallstats', methods=['GET','POST'])
+def getallstats():
+    stats = robot.get_all_sensors()
+    return jsonify(stats)
 
 #map or table of fire and path data
 @app.route('/map')
@@ -80,19 +84,8 @@ def getcurrentcommand():
 #stop current process
 @app.route('/stop', methods=['GET','POST'])
 def stop():
-    robot.CurrentCommand = "stop"
     robot.stop_all()
     return jsonify({ "message":"stopping" })
-
-#get all stats
-@app.route('/getallstats', methods=['GET','POST'])
-def getallstats():
-    battery = robot.get_battery()
-    gyro = robot.get_gyro_sensor()
-    colour = robot.get_colour_sensor()
-    ultra = robot.get_ultra_sensor()
-    thermal = robot.get_thermal_sensor(True)
-    return jsonify({ "battery":battery, "gyro":gyro, "ultra":ultra, "colour":colour, "thermal":thermal })
 
 #Shutdown the web server
 @app.route('/shutdown', methods=['GET','POST'])
