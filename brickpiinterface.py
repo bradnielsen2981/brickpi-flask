@@ -1,33 +1,35 @@
 import brickpi3 # import the BrickPi3 drivers
 import time
+import math
 import sys
 import logging
-import threading #the Thermal Sensor needs a thread, this could be started by Flask
-#from di_sensors.temp_hum_press import TempHumPress
+import threading 
+from di_sensors.inertial_measurement_unit import InertialMeasurementUnit
+from di_sensors.temp_hum_press import TempHumPress
 
-
-#Created a Class to wrap the robot functionality, one of the features is idea of keeping track of the CurrentCommand, this is important when more than one process is running...
+#Created a Class to wrap the robot functionality, one of the features is the idea of keeping track of the CurrentCommand, this is important when more than one process is running...
 class Robot():
 
     #use the init method to define your configuration
     def __init__(self, log=None):
         self.BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3
-        if log != None:
-            self.logger = log
-        else:
+        if log == None:
             self.logger = logging.getLogger(__name__)
+        else:
+            self.logger = log
         bp = self.BP
         self.rightmotor = bp.PORT_A
         self.leftmotor = bp.PORT_B
         self.largemotors = bp.PORT_A + bp.PORT_B
         self.mediummotor = bp.PORT_C
         #self.thp = TempHumPress() #port is the I2c Grove
+        self.imu = InertialMeasurementUnit()
         self.thermal = bp.PORT_1
         bp.set_sensor_type(self.thermal, bp.SENSOR_TYPE.I2C, [0, 20]) 
         self.colour = bp.PORT_2 #Colour Sensor
         bp.set_sensor_type(self.colour, bp.SENSOR_TYPE.EV3_COLOR_COLOR)
-        self.gyro = bp.PORT_3 #Gyro Sensor
-        bp.set_sensor_type(self.gyro, bp.SENSOR_TYPE.EV3_GYRO_ABS_DPS)
+        #self.gyro = bp.PORT_3 # Lego Gyro Sensor
+        #bp.set_sensor_type(self.gyro, bp.SENSOR_TYPE.EV3_GYRO_ABS_DPS)
         self.ultra = bp.PORT_4 #UltraSonic Senor
         bp.set_sensor_type(self.ultra, bp.SENSOR_TYPE.EV3_ULTRASONIC_CM)
         self.thermal_thread = None #for later thread
@@ -44,11 +46,16 @@ class Robot():
         return self.BP.get_voltage_battery()
 
     #get the gyro sensor -- returns 0 if not working but total degrees otherwise
-    def get_gyro_sensor(self):
+    #can switch between IMU sensor and EV3 sensor.
+    def get_gyro_sensor(self, IMUgyro=True):
         bp = self.BP
         degrees = 0
         try:
-            degrees = bp.get_sensor(self.gyro)[0]
+            if IMUgyro:
+                (x,y,z) = imu.read_gyroscope()
+                degrees = x
+            else: #using EV3 gyro
+                degrees = bp.get_sensor(self.gyro)[0]
             time.sleep(0.01)
         except brickpi3.SensorError as error:
             self.logger.error("GYRO: " + str(error))
@@ -78,6 +85,17 @@ class Robot():
             self.logger.error("TEMP HUMIDY PRESSURE: " + str(error))
             return (0,0,0)
         return(temp,hum,press) #return a tuple containing temp,hum,press'''
+
+    #returns the compass value from the IMU - note if the IMU is placed near a motor it can be affected
+    def get_compass(self):
+        heading = 0
+        try:
+            (x, y, z)  = self.imu.read_magnetometer()
+            time.sleep(0.01)
+            heading = math.atan2(y, x) * (180 / math.pi)
+        except brickpi3.SensorError as error:
+            self.logger.error("IMU: " + str(error))
+        return heading
 
     #returns the colour current sensed - "none", "Black", "Blue", "Green", "Yellow", "Red", "White", "Brown"
     def get_colour_sensor(self):
@@ -112,7 +130,7 @@ class Robot():
         return
 
     #return the infrared temperature - this seems to work but im sceptical
-    def get_thermal_sensor(self, usethread=False):
+    def get_thermal_sensor(self, usethread=True):
         bp = self.BP
         temp = 0
         if not usethread:
@@ -161,7 +179,7 @@ class Robot():
         return
 
     #moves for the specified time (seconds) and power - use negative power to reverse
-    def move_time_power(self, t, power):
+    def move_time_power(self, power, t):
         bp = self.BP
         self.CurrentCommand = "movepower"
         target = time.time() + t
@@ -202,6 +220,25 @@ class Robot():
             bp.set_motor_power(self.leftmotor, power)
             self.logger.info("ROTATING - Gyro degrees remaining: " + str(targetdegrees - currentdegrees))
             currentdegrees = self.get_gyro_sensor()
+        self.CurrentCommand = "stop"
+        bp.set_motor_power(self.largemotors, 0) #stop
+        return
+
+    #rotates the robot until faces targetheading, (negative power rotates left)
+    def rotate_power_heading(self, power, targetheading):
+        bp = self.BP
+        self.CurrentCommand = "rotate to heading"
+        heading = self.get_compass()
+        if heading == targetheading:
+            return
+        symbol = '>' if targetheading > heading else '<'  #shorthand if statement
+        power = -(power) if targetheading > heading else power
+        expression = 'targetheading' + symbol + 'heading'
+        while eval(expression) and self.CurrentCommand != "stop":
+            bp.set_motor_power(self.rightmotor, -power)
+            bp.set_motor_power(self.leftmotor, power)
+            self.logger.info("Current Heading: " + str(heading))
+            heading = self.get_compass()
         self.CurrentCommand = "stop"
         bp.set_motor_power(self.largemotors, 0) #stop
         return
@@ -247,15 +284,18 @@ class Robot():
 #Only execute if this is the main file, good for testing code
 if __name__ == '__main__':
     robot = Robot()
-    robot.move_power_untildistanceto(30,10)
-    robot.rotate_power_degrees(30,-90)
-    target = time.time() + 10
+    #robot.safe_exit()
+    #robot.move_power_untildistanceto(30,10)
+    robot.rotate_power_heading(20, 90)
+    #robot.rotate_power_degrees(30,-90)
+    target = time.time() + 5
     while time.time() < target:
-        robot.log("Battery: " + str(robot.get_battery()))
-        robot.log("Gyro: " + str(robot.get_gyro_sensor()))
-        robot.log("Colour: " + str(robot.get_colour_sensor()))
-        robot.log("Ultra: " + str(robot.get_ultra_sensor()))
-        robot.log("Thermal: " + str(robot.get_thermal_sensor(True))) 
+        print("Battery: " + str(robot.get_battery()))
+        print("Compass: " + str(robot.get_compass()))
+        print("Gyro: " + str(robot.get_gyro_sensor()))
+        print("Colour: " + str(robot.get_colour_sensor()))
+        print("Ultra: " + str(robot.get_ultra_sensor()))
+        print("Thermal: " + str(robot.get_thermal_sensor()))
     robot.CurrentCommand = "stop" 
     robot.safe_exit()
 
