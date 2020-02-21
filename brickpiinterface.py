@@ -22,6 +22,7 @@ class Robot():
         self.leftmotor = bp.PORT_B
         self.largemotors = bp.PORT_A + bp.PORT_B
         self.mediummotor = bp.PORT_C
+        bp.set_motor_limits(self.mediummotor, 100, 600) #set power and speed limit of the medium motor
         #self.thp = TempHumPress() #port is the I2c Grove
         self.imu = InertialMeasurementUnit()
         self.thermal = bp.PORT_1
@@ -88,13 +89,13 @@ class Robot():
             return (0,0,0)
         return(temp,hum,press) #return a tuple containing temp,hum,press'''
 
-    #returns the compass value from the IMU - note if the IMU is placed near a motor it can be affected
+    #returns the compass value from the IMU - note if the IMU is placed near a motor it can be affected -SEEMS TO RETURN A VALUE BETWEEN -180 and 180. 
     def get_compass(self):
         heading = 0
         try:
             (x, y, z)  = self.imu.read_magnetometer()
             time.sleep(0.01)
-            heading = math.atan2(y, x) * (180 / math.pi)
+            heading = (math.atan2(y, x)*(180/math.pi)) + 180 #makes it 0 - 360 degrees
         except brickpi3.SensorError as error:
             self.logger.error("IMU: " + str(error))
         return heading
@@ -220,7 +221,7 @@ class Robot():
         while eval(expression) and self.CurrentCommand != "stop":
             bp.set_motor_power(self.rightmotor, -power)
             bp.set_motor_power(self.leftmotor, power)
-            print("ROTATING - Gyro degrees remaining: " + str(targetdegrees - currentdegrees))
+            print("Gyro degrees remaining: " + str(targetdegrees - currentdegrees))
             currentdegrees = self.get_gyro_sensor()
         self.CurrentCommand = "stop"
         bp.set_motor_power(self.largemotors, 0) #stop
@@ -233,31 +234,54 @@ class Robot():
         heading = self.get_compass()
         if heading == targetheading:
             return
-        symbol = '>' if targetheading > heading else '<'  #shorthand if statement
-        power = -(power) if targetheading > heading else power
-        expression = 'targetheading' + symbol + 'heading'
+        symbol = '<'; limit = 0
+        if heading < targetheading:
+            symbol = '<'; limit = targetheading-5; 
+        else:
+            symbol = '>'; limit = targetheading+5; power = -power
+        expression = 'heading' + symbol + 'limit'
         while eval(expression) and self.CurrentCommand != "stop":
             bp.set_motor_power(self.rightmotor, -power)
             bp.set_motor_power(self.leftmotor, power)
-            self.logger.info("Current Heading: " + str(heading))
+            print("Current heading: " + str(heading))
             heading = self.get_compass()
         self.CurrentCommand = "stop"
         bp.set_motor_power(self.largemotors, 0) #stop
         return
 
     #moves the target class to the target degrees
-    def move_claw_targetdegrees(self, targetdegrees):
-        self.CurrentCommand = "grab"
+    def move_claw_targetdegrees(self, degrees):
+        self.CurrentCommand = "move claw"
+        degrees = -degrees #reversing 
         bp = self.BP
-        targetdegrees = targetdegrees * 6 #rotation of motor needs to be calibrated to angles via a constant 
-        bp.offset_motor_encoder(self.mediummotor, bp.get_motor_encoder(self.mediummotor)) #reset encoder C to take into account current degree of turn - which is by default 0
-        bp.set_motor_limits(self.mediummotor, 100, 600) #set a power limit (in percent) and a speed limit (in Degrees Per Second)
-        current = bp.get_motor_encoder(self.mediummotor) #current could be 
-        while current != targetdegrees and self.CurrentCommand != "stop":
-            bp.set_motor_position(self.mediummotor, targetdegrees)
-            current = bp.get_motor_encoder(self.mediummotor) #ACCURACY PROBLEM
+        if degrees == 0:
+            return
+        bp.offset_motor_encoder(self.mediummotor, bp.get_motor_encoder(self.mediummotor)) #reset encoder
+        limit = 0; symbol ='<'
+        currentdegrees = 0 
+        if degrees > 0:
+            symbol = '<'; limit = degrees - 5
+        else:
+            symbol = '>'; limit = degrees + 5
+        expression = 'currentdegrees' + symbol + 'limit'
+        currentdegrees = bp.get_motor_encoder(self.mediummotor)
+        while eval(expression) and self.CurrentCommand != "stop":
+            currentdegrees = bp.get_motor_encoder(self.mediummotor) #where is the current angle
+            bp.set_motor_position(self.mediummotor, degrees)
+            currentdegrees = bp.get_motor_encoder(self.mediummotor) #ACCURACY PROBLEM
+            print(currentdegrees)
         self.CurrentCommand = "stop"
         bp.set_motor_power(self.mediummotor, 0)
+        return
+
+    #open the claw
+    def open_claw(self):
+        robot.move_claw_targetdegrees(-1000)
+        return
+
+    #close the claw
+    def close_claw(self):
+        robot.move_claw_targetdegrees(1000)   
         return
 
     #log out whatever
@@ -287,9 +311,12 @@ class Robot():
 if __name__ == '__main__':
     robot = Robot()
     #robot.safe_exit()
+    #obot.close_claw()
+    #robot.open_claw()
+    #robot.rotate_power_degrees(30,90)
     #robot.move_power_untildistanceto(30,10)
-    #robot.rotate_power_heading(20, 90)
-    robot.rotate_power_degrees(30,90)
+    robot.rotate_power_heading(20,360)
+
     target = time.time() + 2
     while time.time() < target:
         print("Battery: " + str(robot.get_battery()))
