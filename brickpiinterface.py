@@ -52,8 +52,10 @@ class Robot():
         degrees = 0
         try:
             if IMUgyro:
-                (x,y,z) = imu.read_gyroscope()
-                degrees = x
+                #the IMU gyroscope actually reads angular velocity
+                #(x,y,z) = self.imu.read_gyroscope()
+                #the IMU euler value actually reads orientation
+                (degrees,roll,pitch) = self.imu.read_euler()
             else: #using EV3 gyro
                 degrees = bp.get_sensor(self.gyro)[0]
             time.sleep(0.01)
@@ -218,7 +220,7 @@ class Robot():
         while eval(expression) and self.CurrentCommand != "stop":
             bp.set_motor_power(self.rightmotor, -power)
             bp.set_motor_power(self.leftmotor, power)
-            self.logger.info("ROTATING - Gyro degrees remaining: " + str(targetdegrees - currentdegrees))
+            print("ROTATING - Gyro degrees remaining: " + str(targetdegrees - currentdegrees))
             currentdegrees = self.get_gyro_sensor()
         self.CurrentCommand = "stop"
         bp.set_motor_power(self.largemotors, 0) #stop
@@ -286,9 +288,9 @@ if __name__ == '__main__':
     robot = Robot()
     #robot.safe_exit()
     #robot.move_power_untildistanceto(30,10)
-    robot.rotate_power_heading(20, 90)
-    #robot.rotate_power_degrees(30,-90)
-    target = time.time() + 5
+    #robot.rotate_power_heading(20, 90)
+    robot.rotate_power_degrees(30,90)
+    target = time.time() + 2
     while time.time() < target:
         print("Battery: " + str(robot.get_battery()))
         print("Compass: " + str(robot.get_compass()))
@@ -298,6 +300,5 @@ if __name__ == '__main__':
         print("Thermal: " + str(robot.get_thermal_sensor()))
     robot.CurrentCommand = "stop" 
     robot.safe_exit()
-
     #robot.disable_thermal_sensor() -- could also enable and disable thermal sensor when needed
 
