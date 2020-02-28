@@ -2,7 +2,20 @@
 {% block content %}
 <h2>Dashboard</h2>
 <div class="container">
-    Sensor data to go here....
+    <table class="table">
+        <thead><tr><th scope="col">Sensor</th><th scope="col">Value</th></tr></thead>
+        <tbody>
+            <tr><th scope="row">Battery</th><td id="sbattery">-</td></tr>
+            <tr><th scope="row">Colour</th><td id="scolour">-</td></tr>
+            <tr><th scope="row">Ultrasonic</th><td id="sultrasonic">-</td></tr>
+            <tr><th scope="row">Thermal</th><td id="sthermal">-</td></tr>
+            <tr><th scope="row">Acceleration</th><td id="sacceleration">-</td></tr>
+            <tr><th scope="row">Compass</th><td id="scompass">-</td></tr>
+            <tr><th scope="row">Gyro</th><td id="sgyro">-</td></tr>
+            <tr><th scope="row">Temperature</th><td id="stemperature">-</td></tr>
+            <tr><th scope="row">Orientation</th><td id="sorientation">-</td></tr>
+        </tbody>
+        </table>
 </div>
 {% endblock %}
 {% block scripts %}
