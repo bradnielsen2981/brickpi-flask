@@ -66,15 +66,22 @@ class Robot():
     def get_battery(self):
         return self.BP.get_voltage_battery()
 
-#print out a complete output from the IMU sensor
+#self.log out a complete output from the IMU sensor
     def calibrate_imu(self, timelimit=20):
         self.stop_all() #stop everything while calibrating...
         self.CurrentCommand = "calibrate_imu"
         self.log("Move around the robot to calibrate the Compass Sensor...")
         self.imu_status = 0
-        timelimit = time.time() + timelimit #maximum of 20 seconds to calibrate compass sensor
+        elapsed = 0; start = time.time()
+        timelimit = start + timelimit #maximum of 20 seconds to calibrate compass sensor
+        
         while self.imu_status != 3 and time.time() < timelimit:
-            print("Callibrating IMU. Status: " + str(self.imu_status) + " Time: " + str(int(time.time()-timelimit)))
+            newtime = time.time()
+            newelapsed = int(newtime - start)
+            if newelapsed > elapsed:
+                elapsed = newelapsed
+                self.log("Calibrating IMU. Status: " + str(self.imu_status) + " Time: " + str(elapsed))
+            
             ifMutexAcquire(USEMUTEX)
             try:
                 self.imu_status = self.imu.BNO055.get_calibration_status()[3]
@@ -82,7 +89,6 @@ class Robot():
             except Exception as error:
                 self.log("IMU Calibration Error: " + error)
             finally:
-                pass
                 ifMutexRelease(USEMUTEX)
         if self.imu_status == 3:
             self.log("IMU Compass Sensor has been calibrated")
@@ -344,7 +350,7 @@ class Robot():
         bp.set_motor_power(self.largemotors, 0) #stop
         return
         
-    #Rotoates the robot with power and degrees using the IMU sensor. Negative degrees = left.
+    #Rotates the robot with power and degrees using the IMU sensor. Negative degrees = left.
     #the larger the number of degrees and the low the power, the more accurate
     #you can set a margin of error if its a little off
     def rotate_power_degrees_IMU(self, power, degrees, marginoferror=3):
@@ -359,13 +365,13 @@ class Robot():
             symbol = '<='; limit = degrees-marginoferror; power = -power
         totaldegreesrotated = 0; lastrun = 0
         timelimit = time.time() + self.timelimit #useful if time is exceeded
-        print("target degrees: " + str(degrees))
-        print(str(totaldegreesrotated) + str(symbol) + str(limit))
+        self.log("target degrees: " + str(degrees))
+        self.log(str(totaldegreesrotated) + str(symbol) + str(limit))
         while eval("totaldegreesrotated" + str(symbol) + "limit") and (self.CurrentCommand != "stop") and (time.time() < timelimit):
             lastrun = time.time()
             bp.set_motor_power(self.rightmotor, power)
             bp.set_motor_power(self.leftmotor, -power)
-            print("Total degrees rotated: " + str(totaldegreesrotated))
+            self.log("Total degrees rotated: " + str(totaldegreesrotated))
             gyrospeed = self.get_gyro_sensor_IMU()[2] #roate around z-axis
             totaldegreesrotated += (time.time() - lastrun)*gyrospeed
         self.CurrentCommand = "stop"
@@ -373,28 +379,30 @@ class Robot():
         return
 
     #rotates the robot until faces targetheading - only works for a heading between 0 - 360
-    def rotate_power_heading(self, power, targetheading):
+    def rotate_power_heading(self, power, targetheading, marginoferror=3):
         bp = self.BP
         self.CurrentCommand = "rotate_power_heading"
         if targetheading < 0:
             targetheading += 360
         elif targetheading > 360:
             targetheading -= 360
-        heading = self.get_compass_sensor()
+        heading = self.get_compass_IMU()
         if heading == targetheading:
             return
         symbol = '<'; limit = 0
         if heading < targetheading:
-            symbol = '<='; limit = targetheading-5; 
+            symbol = '<='; limit = targetheading-marginoferror; power = -power
         else:
-            symbol = '>='; limit = targetheading+5; power = -power
+            symbol = '>='; limit = targetheading+marginoferror; 
         expression = 'heading' + symbol + 'limit'
+        self.log('heading'+symbol+str(limit))
         timelimit = time.time() + self.timelimit
+
         while ((eval(expression) and (self.CurrentCommand != "stop") and time.time() < timelimit)):
             bp.set_motor_power(self.rightmotor, -power)
             bp.set_motor_power(self.leftmotor, power)
+            heading = self.get_compass_IMU()
             self.log("Current heading: " + str(heading))
-            heading = self.get_compass_sensor()
         self.CurrentCommand = "stop"
         bp.set_motor_power(self.largemotors, 0) #stop
         return
@@ -485,15 +493,15 @@ class Robot():
 #Only execute if this is the main file, good for testing code
 if __name__ == '__main__':
     robot = Robot(timelimit=10)
-    #robot.calibrate_imu()
+    robot.calibrate_imu()
     print(robot.get_all_sensors())
-    robot.rotate_power_degrees_IMU(20,90)
+    #robot.rotate_power_degrees_IMU(20,90)
     #robot.move_power_untildistanceto(30,10)
     #robot.move_power_time(40,1)
     #robot.test_calibrate_imu()
     #robot.rotate_power_time(30, 3)
     #robot.close_claw()
-    #robot.rotate_power_heading(20,380)
+    #robot.rotate_power_heading(20,90)
     #robot.safe_exit()
     #robot.CurrentCommand = "stop" 
     robot.safe_exit()

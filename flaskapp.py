@@ -10,7 +10,6 @@ database = DatabaseHelper('test.sqlite')
 
 #Create Robot first. It take 4 seconds to initialise the robot, sensor view wont work until robot is created...
 robot = brickpiinterface.Robot()
-robot.set_log(app.logger)
 if robot.get_battery() < 6: #the robot motors will disable at 6 volts, likewise WIFI will be turned off at 8 volts
     robot.safe_exit()
 
@@ -18,7 +17,7 @@ if robot.get_battery() < 6: #the robot motors will disable at 6 volts, likewise 
 app = Flask(__name__)
 SECRET_KEY = 'my random key can be anything'
 app.config.from_object(__name__) #Set app configuration using above SETTINGS
-
+robot.set_log(app.logger) #set the logger inside the robot
 POWER = 30 #constant power/speed
 
 #Request Handlers ---------------------------------------------
@@ -92,7 +91,7 @@ def getcalibration():
     calibration = "Not Calibrated"
     if robot.calibrate_imu():
         calibration = "Calibrated"
-    return jsonify({"callibration":calibration})
+    return jsonify({"calibration":calibration})
 
 #Stop current process
 @app.route('/stop', methods=['GET','POST'])

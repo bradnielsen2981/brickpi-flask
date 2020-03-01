@@ -2,22 +2,24 @@ var recurringhandle = null; //A handle to the recurring function
 recurringhandle = setInterval(get_all_stats, 1000); //start pinging the server
 var bCalibration = false;
 
+//start calibration
 function start_calibration() {
     bCalibration = true;
     clearInterval(recurringhandle);
     document.getElementById('message').innerHTML = "Callibrating";
-    JSONrequest('/getcallibration','POST', get_callibration_status); //send callibration request
+    JSONrequest('/getcalibration','POST', get_callibration_status); //send callibration request
 }
 
 //This seems to return far too quickly..
 function get_callibration_status(results)
-{
-    recurringhandle = setInterval(get_all_stats, 1000); //restart pinging server
-    document.getElementById('message').innerHTML = results.callibration;
+{   
     bCalibration = false;
+    recurringhandle = setInterval(get_all_stats, 1000); //restart pinging server
+    console.log(results.calibration);
+    document.getElementById('message').innerHTML = results.calibration;
 }
 
-//THis recurring function gets data using JSON
+//This recurring function gets data using JSON, note it cant be used while calibration
 function get_all_stats() {
     if (bCalibration == false)
     {

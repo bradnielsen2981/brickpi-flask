@@ -17,12 +17,12 @@
             <button type="button" class="btn btn-danger" onclick="JSONrequest('/stop','POST')">Stop</button>
           </div>
           <div class="col-4">
-            <button type="button" class="btn btn-dark" onclick="JSONrequest('/shutdown','POST')">Shutdown</button>
+            <button type="button" class="btn btn-dark" onclick="shutdown();">Shutdown</button>
           </div>
         </div>
       </div>
 </div>
 {% endblock %}
 {% block scripts %}
-  <script src="static/currentcommand.js"></script>
+  <script src="static/home.js"></script>
 {% endblock %}
