@@ -5,16 +5,21 @@ import brickpiinterface #imports the grove functionality that you define
 from databaseinterface import DatabaseHelper
 from datetime import datetime
 
+#Create the database
+database = DatabaseHelper('test.sqlite')
+
+#Create Robot first. It take 4 seconds to initialise the robot, sensor view wont work until robot is created...
+robot = brickpiinterface.Robot()
+robot.set_log(app.logger)
+if robot.get_battery() < 6: #the robot motors will disable at 6 volts, likewise WIFI will be turned off at 8 volts
+    robot.safe_exit()
+
 #Global Variables
 app = Flask(__name__)
 SECRET_KEY = 'my random key can be anything'
 app.config.from_object(__name__) #Set app configuration using above SETTINGS
-log = app.logger #sets up a log (log.info('message') or log.error('Testing'))
-robot = brickpiinterface.Robot(app.logger)
+
 POWER = 30 #constant power/speed
-if robot.get_battery() < 6:
-    robot.safe_exit()
-database = DatabaseHelper('test.sqlite')
 
 #Request Handlers ---------------------------------------------
 #home page and login
@@ -26,7 +31,7 @@ def index():
         email = request.form['email']   #get the form field with the name 
         password = request.form['password']
         userdetails = database.ViewQueryHelper("SELECT * FROM users WHERE email=? AND password=?",(email,password))
-        if userdetails[0] != None:  #user exists
+        if len(userdetails) != 0:  #rows have been found
             row = userdetails[0] #userdetails is a list of dictionaries
             session['userid'] = row['userid']
             session['username'] = row['username']
@@ -45,9 +50,9 @@ def home():
     return render_template("home.html", data = results, voltage = robot.get_battery())
 
 #dashboard
-@app.route('/dashboard')
+@app.route('/sensorview', methods=['GET','POST'])
 def dashboard():
-    return render_template("dashboard.html")
+    return render_template("sensorview.html")
 
 #get all stats and return through JSON
 @app.route('/getallstats', methods=['GET','POST'])
@@ -59,9 +64,9 @@ def getallstats():
 @app.route('/map')
 def map():
     results = None
-    return render_template('map.html')
+    return render_template('map.html', results=results)
 
-#start path finding
+#start robot moving
 @app.route('/start', methods=['GET','POST'])
 def start():
     robot.CurrentCommand = "start"
@@ -76,12 +81,20 @@ def getallusers():
     results = database.ViewQueryHelper("SELECT * FROM users")
     return jsonify([dict(row) for row in results]) #jsonify doesnt work with an SQLite.Row
 
-#returns what the robot is currently doing
+#Get the current command
 @app.route('/getcurrentcommand', methods=['GET','POST'])
 def getcurrentcommand():
     return jsonify({"currentcommand":robot.CurrentCommand})
 
-#stop current process
+#Start callibration of the IMU sensor
+@app.route('/getcalibration', methods=['GET','POST'])
+def getcalibration():
+    calibration = "Not Calibrated"
+    if robot.calibrate_imu():
+        calibration = "Calibrated"
+    return jsonify({"callibration":calibration})
+
+#Stop current process
 @app.route('/stop', methods=['GET','POST'])
 def stop():
     robot.stop_all()
@@ -93,7 +106,12 @@ def shutdown():
     robot.safe_exit()
     func = request.environ.get('werkzeug.server.shutdown')
     func()
-    return jsonify({ "message":"shutting down" }) 
+    return jsonify({ "message":"shutting down" })
+
+#Log a message
+def log(message):
+    app.logger.info(message)
+    return
 
 #---------------------------------------------------------------
 if __name__ == '__main__':

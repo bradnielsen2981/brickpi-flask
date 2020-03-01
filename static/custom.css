@@ -1,4 +1,5 @@
 button.btn { width:100%; }
+.mediumcolumn { width:250px; padding:10px; }
 .alert { color:red; }
 .container { margin-top:30px; margin-bottom:30px; }
 footer { margin-top:60px; }

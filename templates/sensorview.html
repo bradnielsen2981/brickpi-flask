@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Sensor View</h2>
+<div class="container">
+    <div class="row">
+        <span class="mediumcolumn"><button type="button" class="btn btn-success" onclick="start_calibration();">Calibrate Compass</button></span><span class="mediumcolumn" id="message"></span>
+    </div>
+    <div>
+    <table class="table">
+        <thead><tr><th scope="col">Sensor</th><th scope="col">Value</th></tr></thead>
+        <tbody>
+            <tr><th scope="row">Battery</th><td id="sbattery">-</td><td>volts</td></tr>
+            <tr><th scope="row">Colour</th><td id="scolour">-</td><td>-</td></tr>
+            <tr><th scope="row">Ultrasonic</th><td id="sultrasonic">-</td><td>cm</td></tr>
+            <tr><th scope="row">Thermal</th><td id="sthermal">-</td><td>Celsius</td></tr>
+            <tr><th scope="row">Acceleration</th><td id="sacceleration">-</td><td>cm/s^2</td></tr>
+            <tr><th scope="row">Compass</th><td id="scompass">-</td><td>degrees</td></tr>
+            <tr><th scope="row">Gyro</th><td id="sgyro">-</td><td>degrees/s^2</td></tr>
+            <tr><th scope="row">Temperature</th><td id="stemperature">-</td><td>Celsius</td></tr>
+            <tr><th scope="row">Orientation</th><td id="sorientation">-</td><td>units</td></tr>
+        </tbody>
+        </table>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="static/getallstats.js"></script>
+{% endblock %}

@@ -3,24 +3,27 @@ import time
 import math
 import sys
 import logging
-import threading 
+import threading
+from di_sensors.easy_mutex import ifMutexAcquire, ifMutexRelease 
 from di_sensors.inertial_measurement_unit import InertialMeasurementUnit
 from di_sensors.temp_hum_press import TempHumPress
 #DO I NEED TO USE MUTEX???
 
 NOREADING = 3000 #just using 3000 to represent no reading
 MAGNETIC_DECLINATION = 11 #i believe this is correct for Brisbane
+USEMUTEX = True #avoid threading issues
 
 #Created a Class to wrap the robot functionality, one of the features is the idea of keeping track of the CurrentCommand, this is important when more than one process is running...
 class Robot():
 
     #Initialise log and timelimit
-    def __init__(self, logger=logging.getLogger(__name__), timelimit=30):
+    def __init__(self, timelimit=30):
+        self.logger = logging.getLogger(__name__) #default logger is set until Flask server running
         self.CurrentCommand = "loading"
         self.BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3
         self.timelimit = timelimit
-        self.logger = logger
         bp = self.BP
+
         #---Init Motors--------#
         self.rightmotor = bp.PORT_A
         self.leftmotor = bp.PORT_B
@@ -28,14 +31,15 @@ class Robot():
         self.mediummotor = bp.PORT_C
         self.claw_closed = False #current state of the claw
         bp.set_motor_limits(self.mediummotor, 100, 600) #set power and speed limit of the medium motor
+
         #---Thermal Infrared Sensor Setup--------#
         self.thermal_thread = None #for later thread
-        self.log("Starting thermal sensor thread to make continual i2c transactions")
         self.thermal = bp.PORT_1
         bp.set_sensor_type(self.thermal, bp.SENSOR_TYPE.I2C, [0, 20]) 
         self.thermal_thread = threading.Thread(target=self.__update_thermal_sensor_thread, args=(1,))
         self.thermal_thread.daemon = True
         self.thermal_thread.start()
+
         #---Initialise other Sensors--------#
         #self.thp = TempHumPress() #port is the I2c Grove
         self.colour = bp.PORT_2 #Colour Sensor
@@ -45,10 +49,16 @@ class Robot():
         self.ultra = bp.PORT_4 #UltraSonic Senor
         bp.set_sensor_type(self.ultra, bp.SENSOR_TYPE.EV3_ULTRASONIC_CM)
         time.sleep(4)
+
         #---Initialise IMU sensor--------#
         self.imu_status = 0
         self.imu = InertialMeasurementUnit()
-        self.CurrentCommand = "loaded"
+        self.CurrentCommand = "stop" #when the device is ready for a new instruction it will be set to stop
+        return
+
+    #changes the logger
+    def set_log(self, logger):
+        self.logger=logger
         return
 
     #-----------SENSOR COMMAND----------------#
@@ -56,28 +66,106 @@ class Robot():
     def get_battery(self):
         return self.BP.get_voltage_battery()
 
+#print out a complete output from the IMU sensor
+    def calibrate_imu(self, timelimit=20):
+        self.stop_all() #stop everything while calibrating...
+        self.CurrentCommand = "calibrate_imu"
+        self.log("Move around the robot to calibrate the Compass Sensor...")
+        self.imu_status = 0
+        timelimit = time.time() + timelimit #maximum of 20 seconds to calibrate compass sensor
+        while self.imu_status != 3 and time.time() < timelimit:
+            print("Callibrating IMU. Status: " + str(self.imu_status) + " Time: " + str(int(time.time()-timelimit)))
+            ifMutexAcquire(USEMUTEX)
+            try:
+                self.imu_status = self.imu.BNO055.get_calibration_status()[3]
+                time.sleep(0.01)
+            except Exception as error:
+                self.log("IMU Calibration Error: " + error)
+            finally:
+                pass
+                ifMutexRelease(USEMUTEX)
+        if self.imu_status == 3:
+            self.log("IMU Compass Sensor has been calibrated")
+            return True
+        else:
+            self.log("Calibration unsucessful")
+            return 
+        
+        return
+
+   #returns the compass value from the IMU sensor - note if the IMU is placed near a motor it can be affected -SEEMS TO RETURN A VALUE BETWEEN -180 and 180. 
+    def get_compass_IMU(self):
+        heading = NOREADING
+        ifMutexAcquire(USEMUTEX)
+        try:
+            (x, y, z)  = self.imu.read_magnetometer()
+            time.sleep(0.01)
+            heading = int(math.atan2(y, x)*(180/math.pi)) + MAGNETIC_DECLINATION 
+            #make it 0 - 360 degrees
+            if heading < 0:
+                heading += 360
+            elif heading > 360:
+                heading -= 360
+        except Exception as error:
+            self.logger.error("IMU: " + str(error))
+        finally:
+            ifMutexRelease(USEMUTEX)
+        return heading
+
+    #returns the absolute orientation value using euler rotations, I think this is calilbrated from the compass sensor and therefore requires calibration
+    def get_orientation_IMU(self):
+        readings = (NOREADING,NOREADING,NOREADING)
+        ifMutexAcquire(USEMUTEX)
+        try:
+            readings = self.imu.read_euler()
+            time.sleep(0.01)
+        except Exception as error:
+            self.logger.error("IMU Orientation: " + str(error))
+        finally:
+            ifMutexRelease(USEMUTEX)
+        return readings  
+    
+    #returns the acceleration from the IMU sensor - could be useful for detecting collisions or an involuntary stop
+    def get_linear_acceleration_IMU(self):
+        readings = (NOREADING,NOREADING,NOREADING)
+        ifMutexAcquire(USEMUTEX)
+        try:
+            #readings = self.imu.read_accelerometer()
+            readings = self.imu.read_linear_acceleration()
+            readings = tuple([int(i*100) for i in readings])
+            time.sleep(0.01)
+        except Exception as error:
+            self.logger.error("IMU Acceleration: " + str(error)) 
+        finally:
+            ifMutexRelease(USEMUTEX)   
+        return readings
+
     #get the gyro sensor angle/seconds acceleration from IMU sensor
     def get_gyro_sensor_IMU(self):
-        bp = self.BP
         gyro_readings = (NOREADING,NOREADING,NOREADING)
+        ifMutexAcquire(USEMUTEX)
         try:
             gyro_readings = self.imu.read_gyroscope() #degrees/s
             time.sleep(0.01)
         except Exception as error:
             self.logger.error("IMU GYRO: " + str(error))
             self.CurrentCommand = "stop"
+        finally:
+            ifMutexRelease(USEMUTEX)
         return gyro_readings
 
     #gets the temperature using the IMU sensor
     def get_temperature_IMU(self):
-        bp = self.BP
         temp = NOREADING
+        ifMutexAcquire(USEMUTEX)
         try:
             temp = self.imu.read_temperature()
             time.sleep(0.01)
         except Exception as error:
             self.logger.error("IMU Temp: " + str(error))
             self.CurrentCommand = "stop"
+        finally:
+            ifMutexRelease(USEMUTEX)
         return temp
 
     #The EV3 gyro sensor sends an absolute rotation value
@@ -105,8 +193,9 @@ class Robot():
         return distance
 
     #read temp and humidity from the I2C port, you need an I2C temp sensor - #disabled currently
-    def get_temp_humidity_press_sensor(self):
+    def get_temp_humidity_press_I2C(self):
         temp, hum, press = (NOREADING,NOREADING,NOREADING)
+        #ifMutexAcquire(USEMUTEX)
         try:
             temp = self.thp.get_temperature_celsius()
             hum = self.thp.get_humidity()
@@ -115,41 +204,10 @@ class Robot():
         except brickpi3.SensorError as error:
             self.logger.error("TEMP HUMIDY PRESSURE: " + str(error))
             return (0,0,0)
+        finally:
+            pass
+            #ifMutexRelease(USEMUTEX)
         return(temp,hum,press) #return a tuple containing temp,hum,press'''
-
-    #returns the compass value from the IMU sensor - note if the IMU is placed near a motor it can be affected -SEEMS TO RETURN A VALUE BETWEEN -180 and 180. 
-    def get_compass_IMU(self):
-        heading = NOREADING
-        try:
-            (x, y, z)  = self.imu.read_magnetometer()
-            time.sleep(0.01)
-            heading = int(math.atan2(y, x)*(180/math.pi)) + 180 + MAGNETIC_DECLINATION 
-            #make it 0 - 360 degrees
-            if heading > 360:
-                heading -= 360
-        except Exception as error:
-            self.logger.error("IMU: " + str(error))
-        return heading
-
-    def get_orientation_IMU(self):
-        readings = (NOREADING,NOREADING,NOREADING)
-        try:
-            readings = self.imu.read_euler()
-            time.sleep(0.01)
-        except Exception as error:
-            self.logger.error("IMU Orientation: " + str(error))
-        return readings  
-
-    #returns the acceleration from the IMU sensor - could be useful for detecting collisions
-    def get_acceleration_IMU(self):
-        readings = (NOREADING,NOREADING,NOREADING)
-        if self.CurrentCommand != 'stop':
-            try:
-                readings = self.imu.read_accelerometer()
-            except Exception as error:
-                self.logger.error("IMU Acceleration: " + str(error))    
-            return readings
-        return readings
 
     #returns the colour current sensed - "none", "Black", "Blue", "Green", "Yellow", "Red", "White", "Brown"
     def get_colour_sensor(self):
@@ -179,11 +237,15 @@ class Robot():
         TIR_GET_EMISSIVITY  = 0x03
         TIR_CHK_EMISSIVITY  = 0x04
         TIR_RESET           = 0x05
+        #ifMutexAcquire(USEMUTEX)
         try:
             bp.transact_i2c(self.thermal, TIR_I2C_ADDR, [TIR_OBJECT], 2)
             time.sleep(0.01)
-        except brickpi3.SensorError as error:
-            self.logger.error("THERMAL: " + str(error))
+        except Exception as error:
+            self.logger.error("THERMAL UPDATE: " + str(error))
+        finally:
+            pass
+            #ifMutexRelease(USEMUTEX)
         return
 
     #return the infrared temperature - if usethread=True - it uses the thread set up in init
@@ -192,14 +254,18 @@ class Robot():
         temp = 0
         if not usethread:
             self.update_thermal_sensor() #not necessary if thread is running
+        #ifMutexAcquire(USEMUTEX)
         try:
             value = bp.get_sensor(self.thermal) # read the sensor values
             time.sleep(0.01)
             temp = (float)((value[1] << 8) + value[0]) # join the MSB and LSB part
             temp = temp * 0.02 - 0.01                  # Converting to Celcius
             temp = temp - 273.15                       
-        except brickpi3.SensorError as error:
-            self.logger.error("THERMAL: " + str(error))
+        except Exception as error:
+            self.logger.error("THERMAL READ: " + str(error))
+        finally:
+            pass
+            #ifMutexRelease(USEMUTEX)    
         return float("%3.f" % temp)
 
     #disable thermal sensor - might be needed to reenable motors (they disable for some reason when thermal sensor is active)
@@ -212,14 +278,14 @@ class Robot():
     #simply turns motors on
     def move_power(self, power):
         bp = self.BP
-        self.CurrentCommand = "move"
+        self.CurrentCommand = "move_power"
         self.BP.set_motor_power(self.largemotors, power)
         return
 
     #moves for the specified time (seconds) and power - use negative power to reverse
     def move_power_time(self, power, t):
         bp = self.BP
-        self.CurrentCommand = "movepower"
+        self.CurrentCommand = "move_power_time"
         timelimit = time.time() + t
         while time.time() < timelimit and self.CurrentCommand != "stop":
             bp.set_motor_power(self.largemotors, power)
@@ -229,7 +295,7 @@ class Robot():
     
     #moves with power until obstruction and return time travelled
     def move_power_untildistanceto(self, power, distanceto):
-        self.CurrentCommand = "moveuntil"
+        self.CurrentCommand = "move_power_untildistanceto"
         bp = self.BP
         distancedetected = 300 # to set an inital distance detected before loop
         elapsedtime = 0;  start = time.time()
@@ -246,7 +312,9 @@ class Robot():
 
     #Rotate power and time, -power to reverse
     def rotate_power_time(self, power, t):
-        self.CurrentCommand = "rotate time"
+        if self.CurrentCommand != 'stop':
+            return
+        self.CurrentCommand = "rotate_power_time"
         bp = self.BP
         target = time.time() + t
         while time.time() < target and self.CurrentCommand != 'stop':
@@ -257,7 +325,7 @@ class Robot():
         
     #Rotates robot with power and degrees using EV3 Gyro sensor. Negative degrees = left. 
     def rotate_power_degrees_EV3(self, power, degrees):
-        self.CurrentCommand = "rotate"
+        self.CurrentCommand = "rotate_power_degrees_EV3"
         bp = self.BP
         currentdegrees = self.get_gyro_sensor()
         targetdegrees = currentdegrees + degrees
@@ -277,15 +345,16 @@ class Robot():
         return
         
     #Rotoates the robot with power and degrees using the IMU sensor. Negative degrees = left.
-    def rotate_power_degrees_IMU(self, power, degrees):
-        self.CurrentCommand = "rotate"
+    #the larger the number of degrees and the low the power, the more accurate
+    #you can set a margin of error if its a little off
+    def rotate_power_degrees_IMU(self, power, degrees, marginoferror=3):
+        self.CurrentCommand = "rotate_power_degrees_IMU"
         bp = self.BP
-        marginoferror = 0
         symbol = '<'; limit = 0
         if degrees == 0:
             return
         elif degrees < 0:
-            symbol = '>='; limit = degrees+marginoferror; 
+            symbol = '>='; limit = degrees+marginoferror
         else:
             symbol = '<='; limit = degrees-marginoferror; power = -power
         totaldegreesrotated = 0; lastrun = 0
@@ -293,14 +362,12 @@ class Robot():
         print("target degrees: " + str(degrees))
         print(str(totaldegreesrotated) + str(symbol) + str(limit))
         while eval("totaldegreesrotated" + str(symbol) + "limit") and (self.CurrentCommand != "stop") and (time.time() < timelimit):
-
-            #need to modulate loop frequency
-
             lastrun = time.time()
             bp.set_motor_power(self.rightmotor, power)
             bp.set_motor_power(self.leftmotor, -power)
             print("Total degrees rotated: " + str(totaldegreesrotated))
-            totaldegreesrotated += (time.time() - lastrun)*self.get_gyro_sensor_IMU()[1] #y-axis
+            gyrospeed = self.get_gyro_sensor_IMU()[2] #roate around z-axis
+            totaldegreesrotated += (time.time() - lastrun)*gyrospeed
         self.CurrentCommand = "stop"
         bp.set_motor_power(self.largemotors, 0) #stop
         return
@@ -308,7 +375,7 @@ class Robot():
     #rotates the robot until faces targetheading - only works for a heading between 0 - 360
     def rotate_power_heading(self, power, targetheading):
         bp = self.BP
-        self.CurrentCommand = "rotate to heading"
+        self.CurrentCommand = "rotate_power_heading"
         if targetheading < 0:
             targetheading += 360
         elif targetheading > 360:
@@ -334,7 +401,7 @@ class Robot():
 
     #moves the target class to the target degrees
     def __move_claw_targetdegrees(self, degrees):
-        self.CurrentCommand = "move claw"
+        self.CurrentCommand = "move_claw_targetdegrees"
         degrees = -degrees #reversing 
         bp = self.BP
         if degrees == 0:
@@ -377,19 +444,6 @@ class Robot():
         self.logger.info(message)
         return
 
-    #print out a complete output from the IMU sensor
-    def test_calibrate_imu(self):
-        timelimit = time.time() + 10 #maximum of 20 seconds to calibrate compass sensor
-        print("Move around the robot to calibrate the Compass Sensor...")
-        self.imu_status = 0
-        while self.imu_status != 3 and time.time() < timelimit:
-            try:
-                self.imu_status = self.imu.BNO055.get_calibration_status()[3]
-            except Exception as error:
-                print("IMU Calibration Error: " + error)
-        print("IMU Compass Sensor has been calibrated")
-        return
-
     #stop all motors and set command to stop
     def stop_all(self):
         bp = self.BP
@@ -408,7 +462,7 @@ class Robot():
         sensordict['colour'] = self.get_colour_sensor()
         sensordict['ultrasonic'] = self.get_ultra_sensor()
         sensordict['thermal'] = self.get_thermal_sensor()
-        sensordict['acceleration'] = self.get_acceleration_IMU()
+        sensordict['acceleration'] = self.get_linear_acceleration_IMU()
         sensordict['compass'] = self.get_compass_IMU()
         sensordict['gyro'] = self.get_gyro_sensor_IMU()
         sensordict['temperature'] = self.get_temperature_IMU()
@@ -423,6 +477,7 @@ class Robot():
         self.stop_all() #stop all motors
         self.logger.info("Exiting")
         bp.reset_all() # Unconfigure the sensors, disable the motors
+        time.sleep(2) #gives time to reset??
         exit()
         return
     
@@ -430,8 +485,9 @@ class Robot():
 #Only execute if this is the main file, good for testing code
 if __name__ == '__main__':
     robot = Robot(timelimit=10)
+    #robot.calibrate_imu()
     print(robot.get_all_sensors())
-    #robot.rotate_power_degrees_IMU(20,90)
+    robot.rotate_power_degrees_IMU(20,90)
     #robot.move_power_untildistanceto(30,10)
     #robot.move_power_time(40,1)
     #robot.test_calibrate_imu()
