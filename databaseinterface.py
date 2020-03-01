@@ -7,14 +7,16 @@
 import sqlite3
 import logging
 
-#Will get a handle to the log of the Flask App if its been created
-log = logging.getLogger('app') 
-
 class DatabaseHelper():
 
     def __init__(self, location):
+        self.logger = logging.getLogger(__name__)
         self.location = location #location of database file
         return
+
+    # initialise the log
+    def set_log(self, log):
+        self.logger = log
 
     # Returns a handle to the Database 
     def connect(self):
@@ -34,8 +36,8 @@ class DatabaseHelper():
                 cursor = connection.execute(query)
             result = cursor.fetchall()  #returns a list of dictionaries
         except (sqlite3.OperationalError, sqlite3.Warning, sqlite3.Error) as e:
-            log.error("DATABASE ERROR: %s" % e)
-            log.error(query) 
+            self.logger.error("DATABASE ERROR: %s" % e)
+            self.logger.error(query) 
         connection.close()
         return result #should be a list of dictionaries on success, else equals None
 
@@ -47,10 +49,15 @@ class DatabaseHelper():
         try:
             result = connection.execute(query, params)
         except (sqlite3.OperationalError, sqlite3.Warning, sqlite3.Error) as e:
-            log.error("DATABASE ERROR: %s" % e)
-            log.error(query) 
+            self.logger.error("DATABASE ERROR: %s" % e)
+            self.logger.error(query) 
         connection.commit()
         connection.close()
         return result #Should be a true or false depending on success??
+
+    # log some information
+    def log(self, message):
+        self.logger.info(message)
+        return
 
 # Close Database Class --------------------------------------------

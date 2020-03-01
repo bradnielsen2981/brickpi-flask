@@ -9,7 +9,7 @@ from datetime import datetime
 database = DatabaseHelper('test.sqlite')
 
 #Create Robot first. It take 4 seconds to initialise the robot, sensor view wont work until robot is created...
-robot = brickpiinterface.Robot()
+robot = brickpiinterface.BrickPiInterface()
 if robot.get_battery() < 6: #the robot motors will disable at 6 volts, likewise WIFI will be turned off at 8 volts
     robot.safe_exit()
 
@@ -18,6 +18,7 @@ app = Flask(__name__)
 SECRET_KEY = 'my random key can be anything'
 app.config.from_object(__name__) #Set app configuration using above SETTINGS
 robot.set_log(app.logger) #set the logger inside the robot
+database.set_log(app.logger) #set the logger inside the database
 POWER = 30 #constant power/speed
 
 #Request Handlers ---------------------------------------------
@@ -29,6 +30,8 @@ def index():
     if request.method == "POST":  #if form data has been sent
         email = request.form['email']   #get the form field with the name 
         password = request.form['password']
+
+        # TODO - need to make sure only one user is able to login at a time...
         userdetails = database.ViewQueryHelper("SELECT * FROM users WHERE email=? AND password=?",(email,password))
         if len(userdetails) != 0:  #rows have been found
             row = userdetails[0] #userdetails is a list of dictionaries

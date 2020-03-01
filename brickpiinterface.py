@@ -11,49 +11,49 @@ from di_sensors.temp_hum_press import TempHumPress
 
 NOREADING = 3000 #just using 3000 to represent no reading
 MAGNETIC_DECLINATION = 11 #i believe this is correct for Brisbane
-USEMUTEX = True #avoid threading issues
+USEMUTEX = True #avoid threading issues using the IMU sensorm might need to use this for thermal sensor
 
 #Created a Class to wrap the robot functionality, one of the features is the idea of keeping track of the CurrentCommand, this is important when more than one process is running...
-class Robot():
+class BrickPiInterface():
 
     #Initialise log and timelimit
-    def __init__(self, timelimit=30):
-        self.logger = logging.getLogger(__name__) #default logger is set until Flask server running
+    def __init__(self, timelimit=20):
+        self.logger = logging.getLogger(__name__) #default logger
         self.CurrentCommand = "loading"
         self.BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3
         self.timelimit = timelimit
+        self.imu_status = 0
+        
+        #--- Initialise Ports --------#
         bp = self.BP
-
-        #---Init Motors--------#
         self.rightmotor = bp.PORT_A
         self.leftmotor = bp.PORT_B
         self.largemotors = bp.PORT_A + bp.PORT_B
         self.mediummotor = bp.PORT_C
-        self.claw_closed = False #current state of the claw
-        bp.set_motor_limits(self.mediummotor, 100, 600) #set power and speed limit of the medium motor
+        self.thermal = bp.PORT_1 #Thermal infrared Sensor
+        self.colour = bp.PORT_2 #Colour Sensor
+        self.ultra = bp.PORT_4 #ultraSonic Sensor
+        self.claw_closed = False #Current state of the claw
+        self.thermal_thread = None #DO NOT REMOVE THIS - USED LATER
+        #self.gyro = bp.PORT_3  #lego Gyro Sensor - replaced with IMU sensor
+        #self.thp = TempHumPress() #port is the I2c Grove
 
-        #---Thermal Infrared Sensor Setup--------#
-        self.thermal_thread = None #for later thread
-        self.thermal = bp.PORT_1
-        bp.set_sensor_type(self.thermal, bp.SENSOR_TYPE.I2C, [0, 20]) 
+        #-- Configure Sensors ---------#
+        bp = self.BP
+        bp.set_sensor_type(self.colour, bp.SENSOR_TYPE.EV3_COLOR_COLOR)
+        #bp.set_sensor_type(self.gyro, bp.SENSOR_TYPE.EV3_GYRO_ABS_DPS)
+        bp.set_sensor_type(self.ultra, bp.SENSOR_TYPE.EV3_ULTRASONIC_CM)
+        bp.set_sensor_type(self.thermal, bp.SENSOR_TYPE.I2C, [0, 20])
+        self.imu = InertialMeasurementUnit()
+        time.sleep(4)
+
+        #-- Start Infrared I2c Thread ---------#
         self.thermal_thread = threading.Thread(target=self.__update_thermal_sensor_thread, args=(1,))
         self.thermal_thread.daemon = True
         self.thermal_thread.start()
+        bp.set_motor_limits(self.mediummotor, 100, 600) #set power / speed limit 
 
-        #---Initialise other Sensors--------#
-        #self.thp = TempHumPress() #port is the I2c Grove
-        self.colour = bp.PORT_2 #Colour Sensor
-        bp.set_sensor_type(self.colour, bp.SENSOR_TYPE.EV3_COLOR_COLOR)
-        #self.gyro = bp.PORT_3 # Lego Gyro Sensor - replaced with IMU sensor
-        #bp.set_sensor_type(self.gyro, bp.SENSOR_TYPE.EV3_GYRO_ABS_DPS)
-        self.ultra = bp.PORT_4 #UltraSonic Senor
-        bp.set_sensor_type(self.ultra, bp.SENSOR_TYPE.EV3_ULTRASONIC_CM)
-        time.sleep(4)
-
-        #---Initialise IMU sensor--------#
-        self.imu_status = 0
-        self.imu = InertialMeasurementUnit()
-        self.CurrentCommand = "stop" #when the device is ready for a new instruction it will be set to stop
+        self.CurrentCommand = "loaded" #when the device is ready for a new instruction it will be set to stop
         return
 
     #changes the logger
@@ -66,7 +66,7 @@ class Robot():
     def get_battery(self):
         return self.BP.get_voltage_battery()
 
-#self.log out a complete output from the IMU sensor
+    #self.log out a complete output from the IMU sensor
     def calibrate_imu(self, timelimit=20):
         self.stop_all() #stop everything while calibrating...
         self.CurrentCommand = "calibrate_imu"
@@ -379,7 +379,7 @@ class Robot():
         return
 
     #rotates the robot until faces targetheading - only works for a heading between 0 - 360
-    def rotate_power_heading(self, power, targetheading, marginoferror=3):
+    def rotate_power_heading_IMU(self, power, targetheading, marginoferror=3):
         bp = self.BP
         self.CurrentCommand = "rotate_power_heading"
         if targetheading < 0:
@@ -434,16 +434,16 @@ class Robot():
         return
 
     #open the claw
-    def open_claw(self):
+    def open_claw(self, degrees=-1100):
         if self.claw_closed == True:
-            self.__move_claw_targetdegrees(-1100)
+            self.__move_claw_targetdegrees(degrees)
             self.claw_closed = False
         return
 
     #close the claw
-    def close_claw(self):
+    def close_claw(self, degrees=1100):
         if self.claw_closed == False:
-            self.__move_claw_targetdegrees(1100)
+            self.__move_claw_targetdegrees(degrees)
             self.claw_closed = True   
         return
 
@@ -501,7 +501,7 @@ if __name__ == '__main__':
     #robot.test_calibrate_imu()
     #robot.rotate_power_time(30, 3)
     #robot.close_claw()
-    #robot.rotate_power_heading(20,90)
+    #robot.rotate_power_heading_IMU(20,90)
     #robot.safe_exit()
     #robot.CurrentCommand = "stop" 
     robot.safe_exit()

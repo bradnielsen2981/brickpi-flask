@@ -5,6 +5,7 @@ var recurringhandle = null;  //can be used to delete recurring function if you w
 recurringhandle = setInterval(get_current_command, 1000);
 
 function shutdown(){
+    alert("SHUTDOWN");
     JSONrequest('/shutdown','POST');
     clearInterval(recurringhandle);
     shutdown = true;
