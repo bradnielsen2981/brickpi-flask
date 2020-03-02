@@ -47,7 +47,7 @@ def index():
 #home page
 @app.route('/missioncontrol')
 def missioncontrol():
-    if robot == None: #make sure robot is
+    if not robot.Configured: #make sure robot is
         return redirect('./')
     if 'userid' not in session:
         return redirect('./') #no form data is carried across using 'dot/'
@@ -57,7 +57,7 @@ def missioncontrol():
 #dashboard
 @app.route('/sensorview', methods=['GET','POST'])
 def sensorview():
-    if robot == None: #make sure robot is
+    if not robot.Configured: #make sure robot is
         return redirect('./')
     if 'userid' not in session:
         return redirect('./')
@@ -72,7 +72,7 @@ def getallstats():
 #map or table of fire and path data
 @app.route('/map')
 def map():
-    if robot == None: #make sure robot is
+    if not robot.Configured: #make sure robot is
         return redirect('./')
     if 'userid' not in session:
         return redirect('./') #no form data is carried across using 'dot/'
@@ -106,6 +106,12 @@ def getcalibration():
     if robot.calibrate_imu():
         calibration = "Calibrated"
     return jsonify({"calibration":calibration})
+
+#Start callibration of the IMU sensor
+@app.route('/reconfigIMU', methods=['GET','POST'])
+def reconfigIMU():
+    robot.reconfig_IMU()
+    return jsonify({"reconfigure":"reconfiguring_IMU"})
 
 #Stop current process
 @app.route('/stop', methods=['GET','POST'])

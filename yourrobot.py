@@ -26,7 +26,7 @@ class Robot(BrickPiInterface):
         self.claw_closed = False #Current state of the claw
         self.thermal_thread = None #DO NOT REMOVE THIS - USED LATER
         #self.gyro = bp.PORT_3  #lego Gyro Sensor - replaced with IMU sensor
-        self.configure_sensors() #calls configure sensors from BrickPi Interface
+        self.configure_sensors() #CONFIGURES SENSORS!!! from BrickPi Interface
         return
 
     #gets the current routine
@@ -62,6 +62,8 @@ class Robot(BrickPiInterface):
 
     #------------POSSIBLE FUNCTIONS TO USE OR OVERRIDE--------------------#
     #def calibrate_imu(self, timelimit=20)
+
+    #def reconfig_IMU(self)
 
     #def get_compass_IMU(self)
 
@@ -115,7 +117,9 @@ class Robot(BrickPiInterface):
 if __name__ == '__main__':
     robot = Robot(timelimit=10)
     #robot.calibrate_imu()
-    #print(robot.get_all_sensors())
+    robot.reconfig_IMU()
+    print(robot.get_all_sensors())
+
     #robot.rotate_power_degrees_IMU(20,90)
     #robot.move_power_untildistanceto(30,10)
     #robot.move_power_time(40,1)

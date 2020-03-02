@@ -10,6 +10,14 @@ function start_calibration() {
     JSONrequest('/getcalibration','POST', get_callibration_status); //send callibration request
 }
 
+//reconfigure IMU sensor
+function reconfigIMU() {
+    bCalibration = true;
+    clearInterval(recurringhandle);
+    document.getElementById('message').innerHTML = "<span class='blinking'>Reconfigure IMU</span>";
+    JSONrequest('/reconfigIMU','POST', get_reconfigure_status); //send callibration request
+}
+
 //This seems to return far too quickly..
 function get_callibration_status(results)
 {   
@@ -17,6 +25,15 @@ function get_callibration_status(results)
     recurringhandle = setInterval(get_all_stats, 1000); //restart pinging server
     console.log(results.calibration);
     document.getElementById('message').innerHTML = results.calibration;
+}
+
+//This seems to return far too quickly..
+function get_reconfigure_status(results)
+{   
+    bCalibration = false;
+    recurringhandle = setInterval(get_all_stats, 1000); //restart pinging server
+    console.log(results.reconfigure);
+    document.getElementById('message').innerHTML = results.reconfigure;
 }
 
 //This recurring function gets data using JSON, note it cant be used while calibration
