@@ -6,7 +6,7 @@ var bCalibration = false;
 function start_calibration() {
     bCalibration = true;
     clearInterval(recurringhandle);
-    document.getElementById('message').innerHTML = "Callibrating";
+    document.getElementById('message').innerHTML = "<span class='blinking'>Callibrating</span>";
     JSONrequest('/getcalibration','POST', get_callibration_status); //send callibration request
 }
 

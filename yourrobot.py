@@ -1,15 +1,15 @@
 # This class inherits from the BrickPi interface, it should include any code for sub-routines
 # You can also over-ride any functions that you do not like. The BrickPiInterface is code created by your teacher to make using the robot easier. It is composed of snippets of code from the DexterIndustries github 
 
-from brickpiinterface import BrickPiInterface
-import databaseinterface
+from interfaces.brickpiinterface import BrickPiInterface
+from interfaces.databaseinterface import DatabaseHelper 
 import logging
 
 class Robot(BrickPiInterface):
     
     def __init__(self, timelimit=30, database=None):
         super().__init__(timelimit)
-        self.database = database #database handle, use ViewQueryHelper, ModifyQueryHelper
+        self.database = database #database handle, use ViewQueryHelper, ModifyQueryHelper to run queries
         self.CurrentRoutine = 'ready' #could be useful to keep track of the current routine
         return
 
@@ -115,7 +115,7 @@ class Robot(BrickPiInterface):
 if __name__ == '__main__':
     robot = Robot(timelimit=10)
     #robot.calibrate_imu()
-    print(robot.get_all_sensors())
+    #print(robot.get_all_sensors())
     #robot.rotate_power_degrees_IMU(20,90)
     #robot.move_power_untildistanceto(30,10)
     #robot.move_power_time(40,1)

@@ -1,4 +1,3 @@
-
 var recurringhandle = null;  //can be used to delete recurring function if you want
 recurringhandle = setInterval(get_map_data, 3000);
 

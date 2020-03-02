@@ -95,7 +95,7 @@ class BrickPiInterface():
                 self.imu_status = self.imu.BNO055.get_calibration_status()[3]
                 time.sleep(0.01)
             except Exception as error:
-                self.log("IMU Calibration Error: " + error)
+                self.log("IMU Calibration Error: " + str(error))
             finally:
                 ifMutexRelease(USEMUTEX)
         if self.imu_status == 3:
@@ -494,7 +494,6 @@ class BrickPiInterface():
         self.logger.info("Exiting")
         bp.reset_all() # Unconfigure the sensors, disable the motors
         time.sleep(2) #gives time to reset??
-        exit()
         return
     
 #--------------------------------------------------------------------
@@ -513,5 +512,6 @@ if __name__ == '__main__':
     #robot.safe_exit()
     #robot.CurrentCommand = "stop" 
     robot.safe_exit()
+    exit()
     #robot.disable_thermal_sensor() -- could also enable and disable thermal sensor when needed'''
 

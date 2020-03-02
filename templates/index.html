@@ -1,4 +1,6 @@
 {% extends "layout.html" %}
+{% block scripts %}
+{% endblock %}
 {% block content %}
 <h2>Login</h2>
 <div class="container">
@@ -10,9 +12,7 @@
         <input type="password" name="password" value="" required>
         <br><br>
         <input type="submit" value="Submit">
-        <p>If you click the "Submit" button, the form-data will be sent to the form action. Default is Email is 'admin@email.com' and Password is 'admin'.</p>
+        <p>If you click the "Submit" button, the form-data will be sent to the form action. Default is Email is <b>'admin@admin'</b> and Password is <b>'admin'</b>.</p>
     </form>
 </div>
-{% endblock %}
-{% block scripts %}
 {% endblock %}

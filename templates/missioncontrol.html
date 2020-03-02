@@ -1,11 +1,11 @@
 {% extends "layout.html" %}
 {% block scripts %}
-  <script src="static/home.js"></script>
+  <script src="/static/scripts/missioncontrol.js"></script>
 {% endblock %}
 {% block content %}
 <h2>Sample Web Interface using Bootstrap</h2><br/>
 <p>The buttons when clicked run a special script that can be used to send data to the server without a form (and the necessary page refresh). This helper script uses JSON (a method of sending complex data through text encoding).</p>
-<p>The helper function can be used as follows <b>JSONrequest</b>(/url, "POST",name_of_callback_function, {var1:"value1",var2:"value2"...})</p><p><i>The callback function receives a result object that contains response data.</i></p>
+<p>The helper function can be used as follows <b>JSONrequest</b>(/url, "POST",name_of_callback_function, {var1:"value1",var2:"value2"...})</p><p><i>The callback function receives a result object that contains response data.</i></p><p>A simpler call can be made: <b>JSONrequest</b>(/url, "POST") if you do not wish to send or receive data.</p>
 <h3>Voltage = {{voltage}}</h3>
 <div class="container">
     <div class="row">
@@ -20,7 +20,7 @@
             <button type="button" class="btn btn-danger" onclick="JSONrequest('/stop','POST')">Stop</button>
           </div>
           <div class="col-4">
-            <button type="button" class="btn btn-dark" onclick="anothertest();">Shutdown</button>
+            <button type="button" class="btn btn-dark" onclick="shutdownserver();">Shutdown Server</button>
           </div>
         </div>
       </div>
