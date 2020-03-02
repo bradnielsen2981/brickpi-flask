@@ -1,11 +1,9 @@
 // Visualization API with the 'corechart' package.
-
 var shutdown = false;
 var recurringhandle = null;  //can be used to delete recurring function if you want
 recurringhandle = setInterval(get_current_command, 1000);
 
-function shutdown(){
-    alert("SHUTDOWN");
+function anothertest(){
     JSONrequest('/shutdown','POST');
     clearInterval(recurringhandle);
     shutdown = true;

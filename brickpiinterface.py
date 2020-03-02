@@ -22,9 +22,13 @@ class BrickPiInterface():
         self.CurrentCommand = "loading"
         self.BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3
         self.timelimit = timelimit
-        self.imu_status = 0
-        
-        #--- Initialise Ports --------#
+        self.imu_status = 0 
+        self.set_ports()
+        self.CurrentCommand = "loaded" #when the device is ready for a new instruction it will be set to stop
+        return
+
+    #--- Initialise Ports --------#
+    def set_ports(self):
         bp = self.BP
         self.rightmotor = bp.PORT_A
         self.leftmotor = bp.PORT_B
@@ -37,8 +41,11 @@ class BrickPiInterface():
         self.thermal_thread = None #DO NOT REMOVE THIS - USED LATER
         #self.gyro = bp.PORT_3  #lego Gyro Sensor - replaced with IMU sensor
         #self.thp = TempHumPress() #port is the I2c Grove
+        self.configure_sensors()
+        return
 
-        #-- Configure Sensors ---------#
+    #-- Configure Sensors ---------#
+    def configure_sensors(self):
         bp = self.BP
         bp.set_sensor_type(self.colour, bp.SENSOR_TYPE.EV3_COLOR_COLOR)
         #bp.set_sensor_type(self.gyro, bp.SENSOR_TYPE.EV3_GYRO_ABS_DPS)
@@ -46,14 +53,15 @@ class BrickPiInterface():
         bp.set_sensor_type(self.thermal, bp.SENSOR_TYPE.I2C, [0, 20])
         self.imu = InertialMeasurementUnit()
         time.sleep(4)
+        bp.set_motor_limits(self.mediummotor, 100, 600) #set power / speed limit 
+        self.start_thermal_infrared_thread()
+        return
 
-        #-- Start Infrared I2c Thread ---------#
+    #-- Start Infrared I2c Thread ---------#
+    def start_thermal_infrared_thread(self):
         self.thermal_thread = threading.Thread(target=self.__update_thermal_sensor_thread, args=(1,))
         self.thermal_thread.daemon = True
         self.thermal_thread.start()
-        bp.set_motor_limits(self.mediummotor, 100, 600) #set power / speed limit 
-
-        self.CurrentCommand = "loaded" #when the device is ready for a new instruction it will be set to stop
         return
 
     #changes the logger

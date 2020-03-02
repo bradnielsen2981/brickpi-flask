@@ -1,4 +1,7 @@
 {% extends "layout.html" %}
+{% block scripts %}
+  <script src="static/home.js"></script>
+{% endblock %}
 {% block content %}
 <h2>Sample Web Interface using Bootstrap</h2><br/>
 <p>The buttons when clicked run a special script that can be used to send data to the server without a form (and the necessary page refresh). This helper script uses JSON (a method of sending complex data through text encoding).</p>
@@ -17,12 +20,9 @@
             <button type="button" class="btn btn-danger" onclick="JSONrequest('/stop','POST')">Stop</button>
           </div>
           <div class="col-4">
-            <button type="button" class="btn btn-dark" onclick="shutdown();">Shutdown</button>
+            <button type="button" class="btn btn-dark" onclick="anothertest();">Shutdown</button>
           </div>
         </div>
       </div>
 </div>
-{% endblock %}
-{% block scripts %}
-  <script src="static/home.js"></script>
 {% endblock %}

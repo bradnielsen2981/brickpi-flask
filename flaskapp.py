@@ -1,7 +1,7 @@
 from flask import Flask, render_template, jsonify, redirect, request, session, flash
 import logging #allow loggings
 import time, sys, json
-import brickpiinterface #imports the grove functionality that you define
+import yourrobot #import in your own robot functionality
 from databaseinterface import DatabaseHelper
 from datetime import datetime
 
@@ -9,8 +9,8 @@ from datetime import datetime
 database = DatabaseHelper('test.sqlite')
 
 #Create Robot first. It take 4 seconds to initialise the robot, sensor view wont work until robot is created...
-robot = brickpiinterface.BrickPiInterface()
-if robot.get_battery() < 6: #the robot motors will disable at 6 volts, likewise WIFI will be turned off at 8 volts
+robot = yourrobot.Robot()
+if robot.get_battery() < 6: #the robot motors will disable at 6 volts
     robot.safe_exit()
 
 #Global Variables

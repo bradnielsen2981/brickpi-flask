@@ -1,19 +1,19 @@
 # This class inherits from the BrickPi interface, it should include any code for sub-routines
-# You can also over-ride any functions that you do not like
+# You can also over-ride any functions that you do not like. The BrickPiInterface is code created by your teacher to make using the robot easier. It is composed of snippets of code from the DexterIndustries github 
 
-import brickpiinterface
+from brickpiinterface import BrickPiInterface
 import databaseinterface
 import logging
 
 class Robot(BrickPiInterface):
-
-    def __init__(self, timelimit=30, database):
+    
+    def __init__(self, timelimit=30, database=None):
         super().__init__(timelimit)
-        self.database = database #a handle to the database
-        self.CurrentRoutine = 'none' #could be useful to keep track of the current routine
+        self.database = database #database handle, use ViewQueryHelper, ModifyQueryHelper
+        self.CurrentRoutine = 'ready' #could be useful to keep track of the current routine
         return
 
-    #Override this function if you wish to change the ports
+    #Override this function if you wish to change the Ports
     def set_ports(self):
         bp = self.BP
         self.rightmotor = bp.PORT_A
@@ -26,6 +26,8 @@ class Robot(BrickPiInterface):
         self.claw_closed = False #Current state of the claw
         self.thermal_thread = None #DO NOT REMOVE THIS - USED LATER
         #self.gyro = bp.PORT_3  #lego Gyro Sensor - replaced with IMU sensor
+        self.configure_sensors() #calls configure sensors from BrickPi Interface
+        return
 
     #gets the current routine
     def get_current_routine(self):
@@ -33,17 +35,29 @@ class Robot(BrickPiInterface):
 
     #create a function that will find a path to the victim and save path events to the database
     def find_path_victim(self):
+        if self.CurrentRoutine != "ready":
+            return
         self.CurrentRoutine = "find_path_victim"
+        #insert your code here
+        self.CurrentRoutine = "ready"
         return
 
     #rescue the victim using the claw.
     def rescue_victim(self):
+        if self.CurrentRoutine != "ready":
+            return
         self.CurrentRoutine = "rescue_victim"
+        #insert your code here
+        self.CurrentRoutine = "ready"        
         return
 
     #use the saved path data to determine a way back to the start
     def return_victim_to_start(self):
+        if self.CurrentRoutine != "ready":
+            return
         self.CurrentRoutine = "return_victim_to_start"
+        #insert your code here
+        self.CurrentRoutine = "ready"
         return
 
     #------------POSSIBLE FUNCTIONS TO USE OR OVERRIDE--------------------#
@@ -73,6 +87,7 @@ class Robot(BrickPiInterface):
 
     #def move_power_time(self, power, t)
 
+    '''RETURNS TIME ELAPSED - may change this to distance once linear accelaration is used'''
     #def move_power_untildistanceto(self, power, distanceto)
 
     #def rotate_power_time(self, power, t)
@@ -94,3 +109,21 @@ class Robot(BrickPiInterface):
     #def get_all_sensors(self)
 
     #def safe_exit(self)
+
+#--------------------------------------------------------------------
+#Only execute if this is the main file, good for testing code
+if __name__ == '__main__':
+    robot = Robot(timelimit=10)
+    #robot.calibrate_imu()
+    print(robot.get_all_sensors())
+    #robot.rotate_power_degrees_IMU(20,90)
+    #robot.move_power_untildistanceto(30,10)
+    #robot.move_power_time(40,1)
+    #robot.test_calibrate_imu()
+    #robot.rotate_power_time(30, 3)
+    #robot.close_claw()
+    #robot.rotate_power_heading_IMU(20,90)
+    #robot.safe_exit()
+    #robot.CurrentCommand = "stop" 
+    robot.safe_exit()
+    #robot.disable_thermal_sensor() -- could also enable and disable thermal sensor when needed'''
