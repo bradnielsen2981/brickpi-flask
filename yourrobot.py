@@ -89,7 +89,7 @@ class Robot(BrickPiInterface):
 
     #def move_power_time(self, power, t)
 
-    '''RETURNS TIME ELAPSED - may change this to distance once linear accelaration is used'''
+    '''RETURNS TIME ELAPSED - may change this to distance once linear acceleration is used'''
     #def move_power_untildistanceto(self, power, distanceto)
 
     #def rotate_power_time(self, power, t)
@@ -117,9 +117,8 @@ class Robot(BrickPiInterface):
 if __name__ == '__main__':
     robot = Robot(timelimit=10)
     #robot.calibrate_imu()
-    robot.reconfig_IMU()
+    #robot.reconfig_IMU()
     print(robot.get_all_sensors())
-
     #robot.rotate_power_degrees_IMU(20,90)
     #robot.move_power_untildistanceto(30,10)
     #robot.move_power_time(40,1)

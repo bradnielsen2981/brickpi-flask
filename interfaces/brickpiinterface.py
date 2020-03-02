@@ -528,11 +528,11 @@ class BrickPiInterface():
 #Only execute if this is the main file, good for testing code
 if __name__ == '__main__':
     robot = BrickPiInterface(timelimit=10)
-    robot.reconfig_IMU()
+    #robot.reconfig_IMU()
     print(robot.get_all_sensors())
     robot.rotate_power_degrees_IMU(20,90)
     #robot.move_power_untildistanceto(30,10)
-    #robot.move_power_time(40,1)
+    robot.move_power_time(30,2)
     #robot.test_calibrate_imu()
     #robot.rotate_power_time(30, 3)
     #robot.close_claw()
