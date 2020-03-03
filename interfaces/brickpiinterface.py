@@ -53,8 +53,7 @@ class BrickPiInterface():
         bp.set_sensor_type(self.ultra, bp.SENSOR_TYPE.EV3_ULTRASONIC_CM)
         bp.set_sensor_type(self.thermal, bp.SENSOR_TYPE.I2C, [0, 20])
         self.imu = InertialMeasurementUnit()
-        time.sleep(4)
-        bp.set_motor_limits(self.mediummotor, 100, 600) #set power / speed limit 
+        time.sleep(4) #need a delay for sensors to calibrate
         self.start_thermal_infrared_thread()
         self.Configured = True
         return
@@ -471,14 +470,14 @@ class BrickPiInterface():
         return
 
     #open the claw
-    def open_claw(self, degrees=-1100):
+    def open_claw(self, degrees=-900):
         if self.claw_closed == True:
             self.__move_claw_targetdegrees(degrees)
             self.claw_closed = False
         return
 
     #close the claw
-    def close_claw(self, degrees=1100):
+    def close_claw(self, degrees=900):
         if self.claw_closed == False:
             self.__move_claw_targetdegrees(degrees)
             self.claw_closed = True   

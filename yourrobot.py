@@ -25,9 +25,9 @@ class Robot(BrickPiInterface):
         self.ultra = bp.PORT_4 #ultraSonic Sensor
         self.claw_closed = False #Current state of the claw
         self.thermal_thread = None #DO NOT REMOVE THIS - USED LATER
-        bp.set_motor_limits(self.mediummotor, 100, 600) #sets the moto limits of the medium motor
         #self.gyro = bp.PORT_3  #lego Gyro Sensor - replaced with IMU sensor
         self.configure_sensors() #CONFIGURES SENSORS!!! from BrickPi Interface
+        bp.set_motor_limits(self.mediummotor, 100, 600) #set medium motor power / speed limit 
         return
 
     #gets the current routine
