@@ -48,14 +48,18 @@ class BrickPiInterface():
     #-- Configure Sensors ---------#
     def configure_sensors(self):
         bp = self.BP
-        bp.set_sensor_type(self.colour, bp.SENSOR_TYPE.EV3_COLOR_COLOR)
-        #bp.set_sensor_type(self.gyro, bp.SENSOR_TYPE.EV3_GYRO_ABS_DPS)
-        bp.set_sensor_type(self.ultra, bp.SENSOR_TYPE.EV3_ULTRASONIC_CM)
-        bp.set_sensor_type(self.thermal, bp.SENSOR_TYPE.I2C, [0, 20])
-        self.imu = InertialMeasurementUnit()
-        time.sleep(4) #need a delay for sensors to calibrate
-        self.start_thermal_infrared_thread()
-        self.Configured = True
+        try:
+            bp.set_sensor_type(self.colour, bp.SENSOR_TYPE.EV3_COLOR_COLOR)
+            #bp.set_sensor_type(self.gyro, bp.SENSOR_TYPE.EV3_GYRO_ABS_DPS)
+            bp.set_sensor_type(self.ultra, bp.SENSOR_TYPE.EV3_ULTRASONIC_CM)
+            bp.set_sensor_type(self.thermal, bp.SENSOR_TYPE.I2C, [0, 20])
+            self.imu = InertialMeasurementUnit()
+            self.Configured = True
+            time.sleep(4) #need a delay for sensors to calibrate
+            self.start_thermal_infrared_thread()
+        except Exception as error:
+            logger.error("Sensors not configured properly")
+            self.Configured = False
         return
 
     #-- Start Infrared I2c Thread ---------#
@@ -524,7 +528,7 @@ class BrickPiInterface():
         return
     
 #--------------------------------------------------------------------
-#Only execute if this is the main file, good for testing code
+# Only execute if this is the main file, good for testing code
 if __name__ == '__main__':
     robot = BrickPiInterface(timelimit=10)
     #robot.reconfig_IMU()
