@@ -80,12 +80,9 @@ def map():
 #start robot moving
 @app.route('/start', methods=['GET','POST'])
 def start():
-<<<<<<< HEAD
     if not robot.Configured: #make sure robot is
         return jsonify({ "message":"robot not yet configured"})
     robot.CurrentCommand = "start"
-=======
->>>>>>> 377bd10d2641435ff04edf70dfd0965dc2d42f0c
     duration = None
     duration = robot.move_power_untildistanceto(POWER,20)
     return jsonify({ "message":"starting", "duration":duration }) #jsonify take any type and makes a JSON 
@@ -102,12 +99,12 @@ def getcurrentcommand():
     return jsonify({"currentcommand":robot.CurrentCommand})
 
 #get the current routine from robot.py
-@app.route('getcurrentroutine', methods=['GET','POST'])
-def getcurrentcommand():
+@app.route('/getcurrentroutine', methods=['GET','POST'])
+def getcurrentroutine():
     return jsonify({"currentroutine":robot.CurrentRoutine})
 
 #get the configuration status from brickpiinterface
-@app.route('getconfigured', methods=['GET','POST'])
+@app.route('/getconfigured', methods=['GET','POST'])
 def getconfigured():
     return jsonify({"configured":robot.Configured})
 
