@@ -536,7 +536,7 @@ class BrickPiInterface():
         return
     
 #--------------------------------------------------------------------
-#Only execute if this is the main file, good for testing code
+# Only execute if this is the main file, good for testing code
 if __name__ == '__main__':
     robot = BrickPiInterface(timelimit=10)
     #robot.reconfig_IMU()

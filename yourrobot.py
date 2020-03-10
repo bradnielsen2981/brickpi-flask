@@ -27,6 +27,7 @@ class Robot(BrickPiInterface):
         self.thermal_thread = None #DO NOT REMOVE THIS - USED LATER
         #self.gyro = bp.PORT_3  #lego Gyro Sensor - replaced with IMU sensor
         self.configure_sensors() #CONFIGURES SENSORS!!! from BrickPi Interface
+        bp.set_motor_limits(self.mediummotor, 100, 600) #set medium motor power / speed limit 
         return
 
     #gets the current routine

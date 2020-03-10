@@ -47,12 +47,10 @@ def index():
 #home page
 @app.route('/missioncontrol')
 def missioncontrol():
-    if not robot.Configured: #make sure robot is
-        return redirect('./')
     if 'userid' not in session:
         return redirect('./') #no form data is carried across using 'dot/'
     results = None
-    return render_template("missioncontrol.html", data = results, voltage = robot.get_battery())
+    return render_template("missioncontrol.html", configured = robot.Configured, voltage = robot.get_battery())
 
 #dashboard
 @app.route('/sensorview', methods=['GET','POST'])
@@ -61,7 +59,7 @@ def sensorview():
         return redirect('./')
     if 'userid' not in session:
         return redirect('./')
-    return render_template("sensorview.html")
+    return render_template("sensorview.html", configured = robot.Configured)
 
 #get all stats and return through JSON
 @app.route('/getallstats', methods=['GET','POST'])
@@ -77,17 +75,19 @@ def map():
     if 'userid' not in session:
         return redirect('./') #no form data is carried across using 'dot/'
     results = None
-    return render_template('map.html', results=results)
+    return render_template('map.html', results=results, configured = robot.Configured)
 
 #start robot moving
 @app.route('/start', methods=['GET','POST'])
 def start():
+<<<<<<< HEAD
     if not robot.Configured: #make sure robot is
         return jsonify({ "message":"robot not yet configured"})
     robot.CurrentCommand = "start"
+=======
+>>>>>>> 377bd10d2641435ff04edf70dfd0965dc2d42f0c
     duration = None
-    while (robot.CurrentCommand != "stop"):
-        duration = robot.move_power_untildistanceto(POWER,20)
+    duration = robot.move_power_untildistanceto(POWER,20)
     return jsonify({ "message":"starting", "duration":duration }) #jsonify take any type and makes a JSON 
 
 #creates a route to get all the event data
@@ -96,10 +96,20 @@ def getallusers():
     results = database.ViewQueryHelper("SELECT * FROM users")
     return jsonify([dict(row) for row in results]) #jsonify doesnt work with an SQLite.Row
 
-#Get the current command
+#Get the current command from brickpiinterface.py
 @app.route('/getcurrentcommand', methods=['GET','POST'])
 def getcurrentcommand():
     return jsonify({"currentcommand":robot.CurrentCommand})
+
+#get the current routine from robot.py
+@app.route('getcurrentroutine', methods=['GET','POST'])
+def getcurrentcommand():
+    return jsonify({"currentroutine":robot.CurrentRoutine})
+
+#get the configuration status from brickpiinterface
+@app.route('getconfigured', methods=['GET','POST'])
+def getconfigured():
+    return jsonify({"configured":robot.Configured})
 
 #Start callibration of the IMU sensor
 @app.route('/getcalibration', methods=['GET','POST'])
