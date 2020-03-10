@@ -9,9 +9,11 @@ from di_sensors.inertial_measurement_unit import InertialMeasurementUnit
 from di_sensors.temp_hum_press import TempHumPress
 #DO I NEED TO USE MUTEX???
 
-NOREADING = 3000 #just using 3000 to represent no reading
+NOREADING = 999 #just using 999 to represent no reading
 MAGNETIC_DECLINATION = 11 #i believe this is correct for Brisbane
 USEMUTEX = True #avoid threading issues using the IMU sensorm might need to use this for thermal sensor
+ENABLED = 1
+DISABLED = 5 #if the sensor returns NOREADING more than 5 times in a row, its permanently disabled
 
 #Created a Class to wrap the robot functionality, one of the features is the idea of keeping track of the CurrentCommand, this is important when more than one process is running...
 class BrickPiInterface():
@@ -40,27 +42,53 @@ class BrickPiInterface():
         self.ultra = bp.PORT_4 #ultraSonic Sensor
         self.claw_closed = False #Current state of the claw
         self.thermal_thread = None #DO NOT REMOVE THIS - USED LATER
-        #self.gyro = bp.PORT_3  #lego Gyro Sensor - replaced with IMU sensor
-        #self.thp = TempHumPress() #port is the I2c Grove
         self.configure_sensors()
         return
 
-    #-- Configure Sensors ---------#
+    #-- Configure Sensors - take 4 seconds ---------#
     def configure_sensors(self):
         bp = self.BP
-        bp.set_sensor_type(self.colour, bp.SENSOR_TYPE.EV3_COLOR_COLOR)
-        #bp.set_sensor_type(self.gyro, bp.SENSOR_TYPE.EV3_GYRO_ABS_DPS)
-        bp.set_sensor_type(self.ultra, bp.SENSOR_TYPE.EV3_ULTRASONIC_CM)
-        bp.set_sensor_type(self.thermal, bp.SENSOR_TYPE.I2C, [0, 20])
-        self.imu = InertialMeasurementUnit()
-        time.sleep(4)
+        self.config = {} #create a dictionary that represents if the sensor is configured
+        #set up colour sensor
+        try:
+            bp.set_sensor_type(self.colour, bp.SENSOR_TYPE.EV3_COLOR_COLOR)
+            time.sleep(1)
+            self.config['colour'] = ENABLED #enabled
+        except Exception as error:
+            self.logger.error("Colour Sensor not found")
+            self.config['colour'] = DISABLED #disabled
+        #set up ultrasonic
+        try:
+            bp.set_sensor_type(self.ultra, bp.SENSOR_TYPE.EV3_ULTRASONIC_CM)
+            time.sleep(1.5)
+            self.config['ultra'] = ENABLED
+        except Exception as error:
+            print("Ultrasonic Sensor not found")
+            self.config['ultra'] = DISABLED
+        #set up thermal
+        try:
+            bp.set_sensor_type(self.thermal, bp.SENSOR_TYPE.I2C, [0, 20])
+            time.sleep(1)
+            self.config['thermal'] = ENABLED
+            self.__start_thermal_infrared_thread()
+        except Exception as error:
+            self.logger.error("Thermal Sensor not found")
+            self.config['thermal'] = DISABLED 
+        #set up imu      
+        try:
+            self.imu = InertialMeasurementUnit()
+            time.sleep(1)
+            self.config['imu'] = ENABLED
+        except Exception as error:
+            self.logger.error("IMU sensor not found")
+            self.config['imu'] = DISABLED   
+        
         bp.set_motor_limits(self.mediummotor, 100, 600) #set power / speed limit 
-        self.start_thermal_infrared_thread()
-        self.Configured = True
+        self.Configured = True #there is a 4 second delay - before robot is configured
         return
 
     #-- Start Infrared I2c Thread ---------#
-    def start_thermal_infrared_thread(self):
+    def __start_thermal_infrared_thread(self):
         self.thermal_thread = threading.Thread(target=self.__update_thermal_sensor_thread, args=(1,))
         self.thermal_thread.daemon = True
         self.thermal_thread.start()
@@ -78,8 +106,8 @@ class BrickPiInterface():
 
     #self.log out a complete output from the IMU sensor
     def calibrate_imu(self, timelimit=20):
-        if not self.Configured:
-            return NOREADING
+        if self.config['imu'] >= DISABLED:
+            return
         self.stop_all() #stop everything while calibrating...
         self.CurrentCommand = "calibrate_imu"
         self.log("Move around the robot to calibrate the Compass Sensor...")
@@ -95,9 +123,11 @@ class BrickPiInterface():
             ifMutexAcquire(USEMUTEX)
             try:
                 self.imu_status = self.imu.BNO055.get_calibration_status()[3]
+                self.config['imu'] = ENABLED
                 time.sleep(0.01)
             except Exception as error:
                 self.log("IMU Calibration Error: " + str(error))
+                self.config['imu'] += 1
             finally:
                 ifMutexRelease(USEMUTEX)
         if self.imu_status == 3:
@@ -111,20 +141,27 @@ class BrickPiInterface():
     #hopefull this is an emergency reconfigure of the IMU Sensor
     def reconfig_IMU(self):
         ifMutexAcquire(USEMUTEX)
-        self.imu.BNO055.i2c_bus.reconfig_bus()
-        time.sleep(0.1) #restabalise the sensor
-        ifMutexRelease(USEMUTEX)
+        try:
+            self.imu.BNO055.i2c_bus.reconfig_bus()
+            time.sleep(0.1) #restabalise the sensor
+            self.config['imu'] = ENABLED
+        except Exception as error:
+            self.logger.error("IMU RECONFIG HAS FAILED" + str(error))
+            self.config['imu'] = DISABLED
+        finally:
+            ifMutexRelease(USEMUTEX)
         return
 
     #returns the compass value from the IMU sensor - note if the IMU is placed near a motor it can be affected -SEEMS TO RETURN A VALUE BETWEEN -180 and 180. 
     def get_compass_IMU(self):
         heading = NOREADING
-        if not self.Configured:
+        if self.config['imu'] >= DISABLED:
             return heading
         ifMutexAcquire(USEMUTEX)
         try:
             (x, y, z)  = self.imu.read_magnetometer()
             time.sleep(0.01)
+            self.config['imu'] = ENABLED
             heading = int(math.atan2(y, x)*(180/math.pi)) + MAGNETIC_DECLINATION 
             #make it 0 - 360 degrees
             if heading < 0:
@@ -133,6 +170,7 @@ class BrickPiInterface():
                 heading -= 360
         except Exception as error:
             self.logger.error("IMU: " + str(error))
+            self.config['imu'] += 1
         finally:
             ifMutexRelease(USEMUTEX)
         return heading
@@ -140,14 +178,16 @@ class BrickPiInterface():
     #returns the absolute orientation value using euler rotations, I think this is calilbrated from the compass sensor and therefore requires calibration
     def get_orientation_IMU(self):
         readings = (NOREADING,NOREADING,NOREADING)
-        if not self.Configured:
+        if self.config['imu'] >= DISABLED:
             return readings
         ifMutexAcquire(USEMUTEX)
         try:
             readings = self.imu.read_euler()
             time.sleep(0.01)
+            self.config['imu'] = ENABLED
         except Exception as error:
             self.logger.error("IMU Orientation: " + str(error))
+            self.config['imu'] += 1
         finally:
             ifMutexRelease(USEMUTEX)
         return readings  
@@ -155,7 +195,7 @@ class BrickPiInterface():
     #returns the acceleration from the IMU sensor - could be useful for detecting collisions or an involuntary stop
     def get_linear_acceleration_IMU(self):
         readings = (NOREADING,NOREADING,NOREADING)
-        if not self.Configured:
+        if self.config['imu'] >= DISABLED:
             return readings
         ifMutexAcquire(USEMUTEX)
         try:
@@ -163,8 +203,10 @@ class BrickPiInterface():
             readings = self.imu.read_linear_acceleration()
             readings = tuple([int(i*100) for i in readings])
             time.sleep(0.01)
+            self.config['imu'] = ENABLED
         except Exception as error:
-            self.logger.error("IMU Acceleration: " + str(error)) 
+            self.logger.error("IMU Acceleration: " + str(error))
+            self.config['imu'] += 1
         finally:
             ifMutexRelease(USEMUTEX)   
         return readings
@@ -172,15 +214,16 @@ class BrickPiInterface():
     #get the gyro sensor angle/seconds acceleration from IMU sensor
     def get_gyro_sensor_IMU(self):
         gyro_readings = (NOREADING,NOREADING,NOREADING)
-        if not self.Configured:
+        if self.config['imu'] >= DISABLED:
             return gyro_readings
         ifMutexAcquire(USEMUTEX)
         try:
             gyro_readings = self.imu.read_gyroscope() #degrees/s
             time.sleep(0.01)
+            self.config['imu'] = ENABLED
         except Exception as error:
             self.logger.error("IMU GYRO: " + str(error))
-            self.CurrentCommand = "stop"
+            self.config['imu'] += 1
         finally:
             ifMutexRelease(USEMUTEX)
         return gyro_readings
@@ -188,78 +231,55 @@ class BrickPiInterface():
     #gets the temperature using the IMU sensor
     def get_temperature_IMU(self):
         temp = NOREADING
-        if not self.Configured:
+        if self.config['imu'] >= DISABLED:
             return temp
         ifMutexAcquire(USEMUTEX)
         try:
             temp = self.imu.read_temperature()
             time.sleep(0.01)
+            self.config['imu'] = ENABLED
         except Exception as error:
             self.logger.error("IMU Temp: " + str(error))
-            self.CurrentCommand = "stop"
+            self.config['imu'] += 1
         finally:
             ifMutexRelease(USEMUTEX)
         return temp
 
-    #The EV3 gyro sensor sends an absolute rotation value
-    def get_gyro_sensor_EV3(self):
-        degrees = NOREADING
-        if not self.Configured:
-            return degrees
-        bp = self.BP
-        try:
-            degrees = bp.get_sensor(self.gyro)[0]
-            time.sleep(0.01)
-        except brickpi3.SensorError as error:
-            self.logger.error("EV3 GYRO: " + str(error))
-            self.CurrentCommand = "stop"
-        return degrees    
-
     #get the ultrasonic sensor
     def get_ultra_sensor(self):
         distance = NOREADING
-        if not self.Configured:
+        if self.config['ultra'] >= DISABLED:
             return distance
         bp = self.BP
+        ifMutexAcquire(USEMUTEX)
         try:
             distance = bp.get_sensor(self.ultra)
             time.sleep(0.3)
+            self.config['ultra'] = ENABLED
         except brickpi3.SensorError as error:
             self.logger.error("ULTRASONIC: " + str(error))
-            self.CurrentCommand = "stop"
-        return distance
-
-    #read temp and humidity from the I2C port, you need an I2C temp sensor - #disabled currently
-    def get_temp_humidity_press_I2C(self):
-        (temp,hum,press) = (NOREADING,NOREADING,NOREADING)
-        if not self.Configured:
-            return (temp,hum,press)
-        #ifMutexAcquire(USEMUTEX)
-        try:
-            temp = self.thp.get_temperature_celsius()
-            hum = self.thp.get_humidity()
-            press = self.thp.get_pressure()
-            time.sleep(0.01)
-        except brickpi3.SensorError as error:
-            self.logger.error("TEMP HUMIDY PRESSURE: " + str(error))
-            return (0,0,0)
+            self.config['ultra'] += 1
         finally:
-            pass
-            #ifMutexRelease(USEMUTEX)
-        return(temp,hum,press) #return a tuple containing temp,hum,press'''
+            ifMutexRelease(USEMUTEX) 
+        return distance
 
     #returns the colour current sensed - "none", "Black", "Blue", "Green", "Yellow", "Red", "White", "Brown"
     def get_colour_sensor(self):
-        if not self.Configured:
+        if self.config['colour'] >= DISABLED:
             return "NOREADING"
         bp = self.BP
         value = 0
         colours = ["NOREADING", "Black", "Blue", "Green", "Yellow", "Red", "White", "Brown"]
+        ifMutexAcquire(USEMUTEX)
         try: 
             value = bp.get_sensor(self.colour) 
             time.sleep(0.01)
+            self.config['colour'] = ENABLED
         except brickpi3.SensorError as error:
-            self.logger.error("COLOUR: " + str(error))    
+            self.logger.error("COLOUR: " + str(error))
+            self.config['colour'] += 1
+        finally:
+            ifMutexRelease(USEMUTEX)                
         return colours[value]
 
     #updates the thermal sensor by making continual I2C transactions through a thread
@@ -270,6 +290,9 @@ class BrickPiInterface():
 
     #updates the thermal sensor by making a single I2C transaction
     def update_thermal_sensor(self):
+        if self.config['thermal'] >= DISABLED:
+            self.CurrentCommand = 'exit' #end thread
+            return
         bp = self.BP
         TIR_I2C_ADDR        = 0x0E      # TIR I2C device address 
         TIR_AMBIENT         = 0x00      # Ambient Temp
@@ -278,7 +301,6 @@ class BrickPiInterface():
         TIR_GET_EMISSIVITY  = 0x03
         TIR_CHK_EMISSIVITY  = 0x04
         TIR_RESET           = 0x05
-        #ifMutexAcquire(USEMUTEX)
         try:
             bp.transact_i2c(self.thermal, TIR_I2C_ADDR, [TIR_OBJECT], 2)
             time.sleep(0.01)
@@ -286,29 +308,29 @@ class BrickPiInterface():
             self.logger.error("THERMAL UPDATE: " + str(error))
         finally:
             pass
-            #ifMutexRelease(USEMUTEX)
         return
 
     #return the infrared temperature - if usethread=True - it uses the thread set up in init
     def get_thermal_sensor(self, usethread=True):
-        if not self.Configured:
-            return NOREADING
+        temp = NOREADING
+        if self.config['thermal'] >= DISABLED:
+            return temp
         bp = self.BP
-        temp = 0
         if not usethread:
             self.update_thermal_sensor() #not necessary if thread is running
-        #ifMutexAcquire(USEMUTEX)
+        ifMutexAcquire(USEMUTEX)
         try:
             value = bp.get_sensor(self.thermal) # read the sensor values
             time.sleep(0.01)
+            self.config['thermal'] = ENABLED
             temp = (float)((value[1] << 8) + value[0]) # join the MSB and LSB part
             temp = temp * 0.02 - 0.01                  # Converting to Celcius
             temp = temp - 273.15                       
         except Exception as error:
             self.logger.error("THERMAL READ: " + str(error))
+            self.config['thermal'] += 1
         finally:
-            pass
-            #ifMutexRelease(USEMUTEX)    
+            ifMutexRelease(USEMUTEX)    
         return float("%3.f" % temp)
 
     #disable thermal sensor - might be needed to reenable motors (they disable for some reason when thermal sensor is active)
@@ -338,6 +360,8 @@ class BrickPiInterface():
     
     #moves with power until obstruction and return time travelled
     def move_power_untildistanceto(self, power, distanceto):
+        if self.config['ultra'] >= DISABLED:
+            return 0
         self.CurrentCommand = "move_power_untildistanceto"
         bp = self.BP
         distancedetected = 300 # to set an inital distance detected before loop
@@ -345,7 +369,7 @@ class BrickPiInterface():
         #ultra sonic sensors can sometimes return 0
         bp.set_motor_power(self.largemotors, power)
         timelimit = time.time() + self.timelimit
-        while ((distancedetected > distanceto or distancedetected == 0.0) and (self.CurrentCommand != "stop") and (time.time() < timelimit)):
+        while ((distancedetected > distanceto or distancedetected == 0.0) and (self.CurrentCommand != "stop") and (time.time() < timelimit) and self.config['ultra'] < DISABLED):
             distancedetected = self.get_ultra_sensor()
             self.logger.info("MOVING - Distance detected: " + str(distancedetected))
         self.CurrentCommand = "stop"
@@ -355,8 +379,6 @@ class BrickPiInterface():
 
     #Rotate power and time, -power to reverse
     def rotate_power_time(self, power, t):
-        if self.CurrentCommand != 'stop':
-            return
         self.CurrentCommand = "rotate_power_time"
         bp = self.BP
         target = time.time() + t
@@ -364,33 +386,15 @@ class BrickPiInterface():
             bp.set_motor_power(self.rightmotor, -power)
             bp.set_motor_power(self.leftmotor, power)
         bp.set_motor_power(self.largemotors, 0) #stop
-        return
-        
-    #Rotates robot with power and degrees using EV3 Gyro sensor. Negative degrees = left. 
-    def rotate_power_degrees_EV3(self, power, degrees):
-        self.CurrentCommand = "rotate_power_degrees_EV3"
-        bp = self.BP
-        currentdegrees = self.get_gyro_sensor()
-        targetdegrees = currentdegrees + degrees
-        #Complex code - need to reverse if statements based on left or right turn
-        symbol = '>' if degrees < 0 else '<'  #shorthand if statement
-        power = -(power) if degrees < 0 else power
-        expression = 'currentdegrees' + symbol + 'targetdegrees'
-        #assuming of robot rotation for longer than 20seconds there is an error and stop
-        timelimit = time.time() + self.timelimit
-        while eval(expression) and self.CurrentCommand != "stop" and time.time() < timelimit:
-            bp.set_motor_power(self.rightmotor, -power)
-            bp.set_motor_power(self.leftmotor, power)
-            self.log("Gyro degrees remaining: " + str(targetdegrees - currentdegrees))
-            currentdegrees = self.get_gyro_sensor()
-        self.CurrentCommand = "stop"
-        bp.set_motor_power(self.largemotors, 0) #stop
+        self.CurrentCommand = 'stop'
         return
         
     #Rotates the robot with power and degrees using the IMU sensor. Negative degrees = left.
     #the larger the number of degrees and the low the power, the more accurate
     #you can set a margin of error if its a little off
     def rotate_power_degrees_IMU(self, power, degrees, marginoferror=3):
+        if self.config['imu'] >= DISABLED:
+            return
         self.CurrentCommand = "rotate_power_degrees_IMU"
         bp = self.BP
         symbol = '<'; limit = 0
@@ -404,7 +408,7 @@ class BrickPiInterface():
         timelimit = time.time() + self.timelimit #useful if time is exceeded
         self.log("target degrees: " + str(degrees))
         self.log(str(totaldegreesrotated) + str(symbol) + str(limit))
-        while eval("totaldegreesrotated" + str(symbol) + "limit") and (self.CurrentCommand != "stop") and (time.time() < timelimit):
+        while eval("totaldegreesrotated" + str(symbol) + "limit") and (self.CurrentCommand != "stop") and (time.time() < timelimit) and self.config['imu'] < DISABLED:
             lastrun = time.time()
             bp.set_motor_power(self.rightmotor, power)
             bp.set_motor_power(self.leftmotor, -power)
@@ -417,6 +421,8 @@ class BrickPiInterface():
 
     #rotates the robot until faces targetheading - only works for a heading between 0 - 360
     def rotate_power_heading_IMU(self, power, targetheading, marginoferror=3):
+        if self.config['imu'] >= DISABLED:
+            return
         bp = self.BP
         self.CurrentCommand = "rotate_power_heading"
         if targetheading < 0:
@@ -434,8 +440,8 @@ class BrickPiInterface():
         expression = 'heading' + symbol + 'limit'
         self.log('heading'+symbol+str(limit))
         timelimit = time.time() + self.timelimit
-
-        while ((eval(expression) and (self.CurrentCommand != "stop") and time.time() < timelimit)):
+        #start rotating until heading is reached
+        while (eval(expression) and (self.CurrentCommand != "stop") and time.time() < timelimit) and self.config['imu'] < DISABLED:
             bp.set_motor_power(self.rightmotor, -power)
             bp.set_motor_power(self.leftmotor, power)
             heading = self.get_compass_IMU()
@@ -472,16 +478,20 @@ class BrickPiInterface():
 
     #open the claw
     def open_claw(self, degrees=-1100):
+        self.CurrentCommand = 'open claw'
         if self.claw_closed == True:
             self.__move_claw_targetdegrees(degrees)
             self.claw_closed = False
+            self.CurrentCommand = 'stop'
         return
 
     #close the claw
     def close_claw(self, degrees=1100):
+        self.CurrentCommand = 'close claw'
         if self.claw_closed == False:
             self.__move_claw_targetdegrees(degrees)
             self.claw_closed = True   
+            self.CurrentCommand = 'stop'
         return
 
     #log out whatever !!!!!THIS IS NOT WORKING UNLESS FLASK LOG USED, DONT KNOW WHY!!!!!
@@ -518,6 +528,7 @@ class BrickPiInterface():
     # call this function to turn off the motors and exit safely.
     def safe_exit(self):
         bp = self.BP
+        self.CurrentCommand = 'exit' #should exit thread
         self.stop_all() #stop all motors
         self.logger.info("Exiting")
         bp.reset_all() # Unconfigure the sensors, disable the motors
@@ -530,14 +541,13 @@ if __name__ == '__main__':
     robot = BrickPiInterface(timelimit=10)
     #robot.reconfig_IMU()
     print(robot.get_all_sensors())
-    robot.rotate_power_degrees_IMU(20,90)
+    #robot.rotate_power_degrees_IMU(20,90)
     #robot.move_power_untildistanceto(30,10)
-    robot.move_power_time(30,2)
+    #robot.move_power_time(30,2)
     #robot.test_calibrate_imu()
     #robot.rotate_power_time(30, 3)
     #robot.close_claw()
-    #robot.rotate_power_heading_IMU(20,90)
-    #robot.safe_exit()
+    robot.rotate_power_heading_IMU(20,270)
     #robot.CurrentCommand = "stop" 
     robot.safe_exit()
     exit()
