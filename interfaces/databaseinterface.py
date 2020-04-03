@@ -34,7 +34,7 @@ class DatabaseHelper():
                 cursor = connection.execute(query, params)
             else:
                 cursor = connection.execute(query)
-            result = cursor.fetchall()  #returns a list of dictionaries
+            result = cursor.fetchall() #returns a list of dictionaries
         except (sqlite3.OperationalError, sqlite3.Warning, sqlite3.Error) as e:
             self.logger.error("DATABASE ERROR: %s" % e)
             self.logger.error(query) 
@@ -47,7 +47,10 @@ class DatabaseHelper():
         connection = self.connect()
         result = None
         try:
-            result = connection.execute(query, params)
+            if params:
+                connection.execute(query, params)
+            else:
+                connection.execute(query)
         except (sqlite3.OperationalError, sqlite3.Warning, sqlite3.Error) as e:
             self.logger.error("DATABASE ERROR: %s" % e)
             self.logger.error(query) 
