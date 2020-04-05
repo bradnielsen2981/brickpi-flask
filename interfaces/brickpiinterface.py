@@ -369,7 +369,11 @@ class BrickPiInterface():
         #ultra sonic sensors can sometimes return 0
         bp.set_motor_power(self.largemotors, power)
         timelimit = time.time() + self.timelimit
-        while ((distancedetected > distanceto or distancedetected == 0.0) and (self.CurrentCommand != "stop") and (time.time() < timelimit) and self.config['ultra'] < DISABLED):
+        while ((distancedetected > distanceto or distancedetected == 0.0) and (self.CurrentCommand != "stop") and (time.time() < timelimit)):
+
+            if (self.config['ultra'] > DISABLED): #if sensor fails quit
+                break
+
             distancedetected = self.get_ultra_sensor()
             self.logger.info("MOVING - Distance detected: " + str(distancedetected))
         self.CurrentCommand = "stop"
@@ -538,11 +542,11 @@ class BrickPiInterface():
 #--------------------------------------------------------------------
 # Only execute if this is the main file, good for testing code
 if __name__ == '__main__':
-    robot = Robot(timelimit=20)
+    robot = BrickPiInterface(timelimit=20)
     logger = logging.getLogger()
     robot.set_log(logger)
-    robot.calibrate_imu(timelimit=20) #calibration might requirement movement
+    robot.calibrate_imu(timelimit=10) #calibration might requirement movement
     robot.log(robot.get_all_sensors())
-    robot.move_power_time(30,2)
+    robot.move_power_untildistanceto(30,10)
     robot.safe_exit()
 

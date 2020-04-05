@@ -62,6 +62,11 @@ class Robot(BrickPiInterface):
         self.CurrentRoutine = "ready"
         return
 
+    def move_forward_until_colour_or_distance(self, distance):
+        if self.CurrentRoutine != "ready":
+            return
+        return
+
     #------------POSSIBLE FUNCTIONS TO USE OR OVERRIDE--------------------#
     #def calibrate_imu(self, timelimit=20)
 
@@ -120,5 +125,6 @@ if __name__ == '__main__':
     logger = logging.getLogger()
     robot.set_log(logger)
     robot.calibrate_imu(timelimit=20) #calibration might requirement movement
+    robot.move_power_untildistanceto(30,10)
     robot.log(robot.get_all_sensors())
     robot.safe_exit()
