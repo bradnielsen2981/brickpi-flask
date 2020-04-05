@@ -20,7 +20,7 @@ class BrickPiInterface():
 
     #Initialise log and timelimit
     def __init__(self, timelimit=20):
-        self.logger = logging.getLogger(__name__) #default logger
+        self.logger = None
         self.CurrentCommand = "loading"
         self.Configured = False #is the robot yet configured?
         self.BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3
@@ -55,7 +55,7 @@ class BrickPiInterface():
             time.sleep(1)
             self.config['colour'] = ENABLED #enabled
         except Exception as error:
-            self.logger.error("Colour Sensor not found")
+            self.log("Colour Sensor not found")
             self.config['colour'] = DISABLED #disabled
         #set up ultrasonic
         try:
@@ -63,7 +63,7 @@ class BrickPiInterface():
             time.sleep(1.5)
             self.config['ultra'] = ENABLED
         except Exception as error:
-            print("Ultrasonic Sensor not found")
+            self.log("Ultrasonic Sensor not found")
             self.config['ultra'] = DISABLED
         #set up thermal
         try:
@@ -72,7 +72,7 @@ class BrickPiInterface():
             self.config['thermal'] = ENABLED
             self.__start_thermal_infrared_thread()
         except Exception as error:
-            self.logger.error("Thermal Sensor not found")
+            self.log("Thermal Sensor not found")
             self.config['thermal'] = DISABLED 
         #set up imu      
         try:
@@ -80,7 +80,7 @@ class BrickPiInterface():
             time.sleep(1)
             self.config['imu'] = ENABLED
         except Exception as error:
-            self.logger.error("IMU sensor not found")
+            self.log("IMU sensor not found")
             self.config['imu'] = DISABLED   
         
         bp.set_motor_limits(self.mediummotor, 100, 600) #set power / speed limit 
@@ -146,7 +146,7 @@ class BrickPiInterface():
             time.sleep(0.1) #restabalise the sensor
             self.config['imu'] = ENABLED
         except Exception as error:
-            self.logger.error("IMU RECONFIG HAS FAILED" + str(error))
+            self.log("IMU RECONFIG HAS FAILED" + str(error))
             self.config['imu'] = DISABLED
         finally:
             ifMutexRelease(USEMUTEX)
@@ -169,7 +169,7 @@ class BrickPiInterface():
             elif heading > 360:
                 heading -= 360
         except Exception as error:
-            self.logger.error("IMU: " + str(error))
+            self.log("IMU: " + str(error))
             self.config['imu'] += 1
         finally:
             ifMutexRelease(USEMUTEX)
@@ -186,7 +186,7 @@ class BrickPiInterface():
             time.sleep(0.01)
             self.config['imu'] = ENABLED
         except Exception as error:
-            self.logger.error("IMU Orientation: " + str(error))
+            self.log("IMU Orientation: " + str(error))
             self.config['imu'] += 1
         finally:
             ifMutexRelease(USEMUTEX)
@@ -201,11 +201,11 @@ class BrickPiInterface():
         try:
             #readings = self.imu.read_accelerometer()
             readings = self.imu.read_linear_acceleration()
-            readings = tuple([int(i*100) for i in readings])
+            #readings = tuple([int(i*100) for i in readings])
             time.sleep(0.01)
             self.config['imu'] = ENABLED
         except Exception as error:
-            self.logger.error("IMU Acceleration: " + str(error))
+            self.log("IMU Acceleration: " + str(error))
             self.config['imu'] += 1
         finally:
             ifMutexRelease(USEMUTEX)   
@@ -222,7 +222,7 @@ class BrickPiInterface():
             time.sleep(0.01)
             self.config['imu'] = ENABLED
         except Exception as error:
-            self.logger.error("IMU GYRO: " + str(error))
+            self.log("IMU GYRO: " + str(error))
             self.config['imu'] += 1
         finally:
             ifMutexRelease(USEMUTEX)
@@ -239,7 +239,7 @@ class BrickPiInterface():
             time.sleep(0.01)
             self.config['imu'] = ENABLED
         except Exception as error:
-            self.logger.error("IMU Temp: " + str(error))
+            self.log("IMU Temp: " + str(error))
             self.config['imu'] += 1
         finally:
             ifMutexRelease(USEMUTEX)
@@ -257,7 +257,7 @@ class BrickPiInterface():
             time.sleep(0.3)
             self.config['ultra'] = ENABLED
         except brickpi3.SensorError as error:
-            self.logger.error("ULTRASONIC: " + str(error))
+            self.log("ULTRASONIC: " + str(error))
             self.config['ultra'] += 1
         finally:
             ifMutexRelease(USEMUTEX) 
@@ -276,7 +276,7 @@ class BrickPiInterface():
             time.sleep(0.01)
             self.config['colour'] = ENABLED
         except brickpi3.SensorError as error:
-            self.logger.error("COLOUR: " + str(error))
+            self.log("COLOUR: " + str(error))
             self.config['colour'] += 1
         finally:
             ifMutexRelease(USEMUTEX)                
@@ -305,7 +305,7 @@ class BrickPiInterface():
             bp.transact_i2c(self.thermal, TIR_I2C_ADDR, [TIR_OBJECT], 2)
             time.sleep(0.01)
         except Exception as error:
-            self.logger.error("THERMAL UPDATE: " + str(error))
+            self.log("THERMAL UPDATE: " + str(error))
         finally:
             pass
         return
@@ -327,7 +327,7 @@ class BrickPiInterface():
             temp = temp * 0.02 - 0.01                  # Converting to Celcius
             temp = temp - 273.15                       
         except Exception as error:
-            self.logger.error("THERMAL READ: " + str(error))
+            self.log("THERMAL READ: " + str(error))
             self.config['thermal'] += 1
         finally:
             ifMutexRelease(USEMUTEX)    
@@ -496,7 +496,7 @@ class BrickPiInterface():
 
     #log out whatever !!!!!THIS IS NOT WORKING UNLESS FLASK LOG USED, DONT KNOW WHY!!!!!
     def log(self, message):
-        self.logger.info(message)
+        self.logger.error(message)
         return
 
     #stop all motors and set command to stop
@@ -530,7 +530,7 @@ class BrickPiInterface():
         bp = self.BP
         self.CurrentCommand = 'exit' #should exit thread
         self.stop_all() #stop all motors
-        self.logger.info("Exiting")
+        self.log("Exiting")
         bp.reset_all() # Unconfigure the sensors, disable the motors
         time.sleep(2) #gives time to reset??
         return
@@ -538,18 +538,11 @@ class BrickPiInterface():
 #--------------------------------------------------------------------
 # Only execute if this is the main file, good for testing code
 if __name__ == '__main__':
-    robot = BrickPiInterface(timelimit=10)
-    #robot.reconfig_IMU()
-    print(robot.get_all_sensors())
-    #robot.rotate_power_degrees_IMU(20,90)
-    #robot.move_power_untildistanceto(30,10)
-    #robot.move_power_time(30,2)
-    #robot.test_calibrate_imu()
-    #robot.rotate_power_time(30, 3)
-    #robot.close_claw()
-    robot.rotate_power_heading_IMU(20,270)
-    #robot.CurrentCommand = "stop" 
+    robot = Robot(timelimit=20)
+    logger = logging.getLogger()
+    robot.set_log(logger)
+    robot.calibrate_imu(timelimit=20) #calibration might requirement movement
+    robot.log(robot.get_all_sensors())
+    robot.move_power_time(30,2)
     robot.safe_exit()
-    exit()
-    #robot.disable_thermal_sensor() -- could also enable and disable thermal sensor when needed'''
 

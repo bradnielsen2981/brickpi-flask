@@ -4,6 +4,7 @@
 from interfaces.brickpiinterface import BrickPiInterface
 from interfaces.databaseinterface import DatabaseHelper 
 import logging
+import time
 
 class Robot(BrickPiInterface):
     
@@ -90,7 +91,6 @@ class Robot(BrickPiInterface):
 
     #def move_power_time(self, power, t)
 
-    '''RETURNS TIME ELAPSED - may change this to distance once linear acceleration is used'''
     #def move_power_untildistanceto(self, power, distanceto)
 
     #def rotate_power_time(self, power, t)
@@ -116,18 +116,9 @@ class Robot(BrickPiInterface):
 #--------------------------------------------------------------------
 #Only execute if this is the main file, good for testing code
 if __name__ == '__main__':
-    robot = Robot(timelimit=10)
-    #robot.calibrate_imu()
-    #robot.reconfig_IMU()
-    print(robot.get_all_sensors())
-    #robot.rotate_power_degrees_IMU(20,90)
-    #robot.move_power_untildistanceto(30,10)
-    #robot.move_power_time(40,1)
-    #robot.test_calibrate_imu()
-    #robot.rotate_power_time(30, 3)
-    #robot.close_claw()
-    #robot.rotate_power_heading_IMU(20,90)
-    #robot.safe_exit()
-    #robot.CurrentCommand = "stop" 
+    robot = Robot(timelimit=20)
+    logger = logging.getLogger()
+    robot.set_log(logger)
+    robot.calibrate_imu(timelimit=20) #calibration might requirement movement
+    robot.log(robot.get_all_sensors())
     robot.safe_exit()
-    #robot.disable_thermal_sensor() -- could also enable and disable thermal sensor when needed'''
