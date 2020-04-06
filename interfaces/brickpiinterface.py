@@ -364,18 +364,22 @@ class BrickPiInterface():
             return 0
         self.CurrentCommand = "move_power_untildistanceto"
         bp = self.BP
-        distancedetected = 300 # to set an inital distance detected before loop
+        distancedetected = 300 # to set an initial distance detected before loop
         elapsedtime = 0;  start = time.time()
-        #ultra sonic sensors can sometimes return 0
+        #Turn motors on
         bp.set_motor_power(self.largemotors, power)
-        timelimit = time.time() + self.timelimit
-        while ((distancedetected > distanceto or distancedetected == 0.0) and (self.CurrentCommand != "stop") and (time.time() < timelimit)):
+        timelimit = time.time() + self.timelimit  #all timelimits are a backup plan
+        while (self.CurrentCommand != "stop" and time.time() < timelimit):
 
-            if (self.config['ultra'] > DISABLED): #if sensor fails quit
-                break
-
+            ##if sensor fails, or distanceto has been reached quit, or distancedetected = 0
             distancedetected = self.get_ultra_sensor()
             self.logger.info("MOVING - Distance detected: " + str(distancedetected))
+            if ((self.config['ultra'] > DISABLED) or (distancedetected < distanceto and distancedetected != 0.0)): 
+                #if an object has been detected, identify the type of object
+                break 
+
+            ##insert other tests e.g if red colour
+
         self.CurrentCommand = "stop"
         elapsedtime = time.time() - start
         bp.set_motor_power(self.largemotors, 0)

@@ -1,10 +1,12 @@
 # This class inherits from the BrickPi interface, it should include any code for sub-routines
 # You can also over-ride any functions that you do not like. The BrickPiInterface is code created by your teacher to make using the robot easier. It is composed of snippets of code from the DexterIndustries github 
-
 from interfaces.brickpiinterface import BrickPiInterface
 from interfaces.databaseinterface import DatabaseHelper 
 import logging
 import time
+
+ENABLED = 1
+DISABLED = 5 #if the sensor returns NOREADING more than 5 times in a row, its permanently 
 
 class Robot(BrickPiInterface):
     
@@ -62,10 +64,41 @@ class Robot(BrickPiInterface):
         self.CurrentRoutine = "ready"
         return
 
-    def move_forward_until_colour_or_distance(self, distance):
-        if self.CurrentRoutine != "ready":
-            return
-        return
+    #CREATE A BETTER METHOD OF MOVING FORWARD UNTIL SOMETHING IS ENCOUNTERED
+    def move_power_until_event(self, power, distanceto):
+        self.CurrentCommand = "move_power_untildistanceto"
+        bp = self.BP
+        elapsedtime = 0;  start = time.time()
+        eventtype = None; eventdata = None
+
+        #Turn motors on
+        bp.set_motor_power(self.largemotors, power)
+        timelimit = time.time() + self.timelimit  #timelimit is simply a limit to how long to execute incase there is an error 
+
+        while (self.CurrentCommand != "stop" and time.time() < timelimit):
+
+            ##if sensor fails, or distanceto has been reached quit, or distancedetected = 0
+            distancedetected = self.get_ultra_sensor()
+            self.log("MOVING - Distance detected: " + str(distancedetected))
+            if (self.config['ultra'] > DISABLED) or ((distancedetected < distanceto) and (distancedetected != 0.0)):
+                #if an object has been detected, identify the type of object
+                eventtype = "objectdetected"
+                #if object is hot its a fire, cold its the victim, else its the wall
+                break
+            
+            ##INSERT OTHER TESTS e.g IF RED COLOUR
+            colourdetected = self.get_colour_sensor()
+            self.log("MOVING - Colour detected: " + str(colourdetected))
+            if (colourdetected == 'Red'):
+                eventtype = "junctiondetected"
+                break
+
+            #if colourdetect == "red":
+
+        self.CurrentCommand = "stop"
+        elapsedtime = time.time() - start
+        bp.set_motor_power(self.largemotors, 0)
+        return (eventtype,eventdata,elapsedtime)
 
     #------------POSSIBLE FUNCTIONS TO USE OR OVERRIDE--------------------#
     #def calibrate_imu(self, timelimit=20)
@@ -124,7 +157,7 @@ if __name__ == '__main__':
     robot = Robot(timelimit=20)
     logger = logging.getLogger()
     robot.set_log(logger)
-    robot.calibrate_imu(timelimit=20) #calibration might requirement movement
-    robot.move_power_untildistanceto(30,10)
     robot.log(robot.get_all_sensors())
+    robot.calibrate_imu(timelimit=10) #calibration might requirement movement
+    print(robot.move_power_until_event(30,10))
     robot.safe_exit()
