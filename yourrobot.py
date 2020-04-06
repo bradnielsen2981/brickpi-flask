@@ -161,4 +161,3 @@ if __name__ == '__main__':
     robot.calibrate_imu(timelimit=10) #calibration might requirement movement
     print(robot.move_power_until_event(30,10))
     robot.safe_exit()
-    print("Thank you and goodnight")
