@@ -12,6 +12,7 @@ database = DatabaseHelper('test.sqlite')
 robot = yourrobot.Robot()
 if robot.get_battery() < 6: #the robot motors will disable at 6 volts
     robot.safe_exit()
+robot.set_database(database) #store a handle to the database inside the robot
 
 #Global Variables
 app = Flask(__name__)

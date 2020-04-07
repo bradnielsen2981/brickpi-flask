@@ -9,6 +9,7 @@ from di_sensors.inertial_measurement_unit import InertialMeasurementUnit
 from di_sensors.temp_hum_press import TempHumPress
 #DO I NEED TO USE MUTEX???
 
+#this needs to go inside the class at somepoint, im trying to avoid confusing students
 NOREADING = 999 #just using 999 to represent no reading
 MAGNETIC_DECLINATION = 11 #i believe this is correct for Brisbane
 USEMUTEX = True #avoid threading issues using the IMU sensorm might need to use this for thermal sensor
