@@ -122,13 +122,13 @@ class Robot(BrickPiInterface):
     #def safe_exit(self)
 
 #--------------------------------------------------------------------
-#Only execute if this is the main file, good for testing code
+#Only execute if this is the main file, this section is good for testing code
 if __name__ == '__main__':
     robot = Robot(timelimit=20)
     logger = logging.getLogger()
     robot.set_log(logger)
-    robot.log(robot.get_all_sensors())
     robot.calibrate_imu(timelimit=10) #calibration might requirement movement
-    robot.log(robot.move_power_until_event(30,10))
+    input("Press any key to test")
+    robot.log(robot.get_all_sensors())
+    robot.move_power_untildistanceto(30,10)
     robot.safe_exit()
-    print("Hello from parent account")
