@@ -41,7 +41,7 @@ class BrickPiInterface():
         self.thermal = bp.PORT_1 #Thermal infrared Sensor
         self.colour = bp.PORT_2 #Colour Sensor
         self.ultra = bp.PORT_4 #ultraSonic Sensor
-        self.claw_closed = False #Current state of the claw
+        self.claw_closed = True #Current state of the claw
         self.thermal_thread = None #DO NOT REMOVE THIS - USED LATER
         self.configure_sensors()
         return
@@ -163,7 +163,7 @@ class BrickPiInterface():
             (x, y, z)  = self.imu.read_magnetometer()
             time.sleep(0.01)
             self.config['imu'] = ENABLED
-            heading = int(math.atan2(y, x)*(180/math.pi)) + MAGNETIC_DECLINATION 
+            heading = int(math.atan2(x, y)*(180/math.pi)) + MAGNETIC_DECLINATION 
             #make it 0 - 360 degrees
             if heading < 0:
                 heading += 360
@@ -359,32 +359,41 @@ class BrickPiInterface():
         self.BP.set_motor_power(self.largemotors, 0)
         return
     
-    #moves with power until obstruction and return time travelled
+    
+    #UPDATED THIS FUNCTION SINCE INTERFACE TEMPLATE WAS GIVEN
+    #moves forward until a colour or an object is detected- return collisiontype
     def move_power_untildistanceto(self, power, distanceto):
         if self.config['ultra'] >= DISABLED:
             return 0
         self.CurrentCommand = "move_power_untildistanceto"
         bp = self.BP
         distancedetected = 300 # to set an initial distance detected before loop
-        elapsedtime = 0;  start = time.time()
+        elapsedtime = 0; starttime = time.time(); timelimit = starttime + self.timelimit  #all timelimits are a backup plan
+        collisiontype = None
         #Turn motors on
         bp.set_motor_power(self.largemotors, power)
-        timelimit = time.time() + self.timelimit  #all timelimits are a backup plan
         while (self.CurrentCommand != "stop" and time.time() < timelimit):
 
             ##if sensor fails, or distanceto has been reached quit, or distancedetected = 0
             distancedetected = self.get_ultra_sensor()
-            self.logger.info("MOVING - Distance detected: " + str(distancedetected))
+            self.log("MOVING - Distance detected: " + str(distancedetected))
             if ((self.config['ultra'] > DISABLED) or (distancedetected < distanceto and distancedetected != 0.0)): 
-                #if an object has been detected, identify the type of object
+                collisiontype = "objectdetected"
                 break 
 
             ##insert other tests e.g if red colour
-
+            colour = self.get_colour_sensor()
+            if colour == "Red":
+                collisiontype = "junctiondetected"
+                break
+            elif colour == "Yellow":
+                collisiontype = "searchareadetected"
+                break
+            
         self.CurrentCommand = "stop"
-        elapsedtime = time.time() - start
+        elapsedtime = time.time() - starttime
         bp.set_motor_power(self.largemotors, 0)
-        return elapsedtime
+        return {"collisiontype":collisiontype,"elapsedtime":elapsedtime}  
 
     #Rotate power and time, -power to reverse
     def rotate_power_time(self, power, t):
@@ -400,7 +409,6 @@ class BrickPiInterface():
         
     #Rotates the robot with power and degrees using the IMU sensor. Negative degrees = left.
     #the larger the number of degrees and the low the power, the more accurate
-    #you can set a margin of error if its a little off
     def rotate_power_degrees_IMU(self, power, degrees, marginoferror=3):
         if self.config['imu'] >= DISABLED:
             return
@@ -414,7 +422,9 @@ class BrickPiInterface():
         else:
             symbol = '<='; limit = degrees-marginoferror; power = -power
         totaldegreesrotated = 0; lastrun = 0
-        timelimit = time.time() + self.timelimit #useful if time is exceeded
+        
+        elapsedtime = 0; starttime = time.time(); timelimit = starttime + self.timelimit
+         
         self.log("target degrees: " + str(degrees))
         self.log(str(totaldegreesrotated) + str(symbol) + str(limit))
         while eval("totaldegreesrotated" + str(symbol) + "limit") and (self.CurrentCommand != "stop") and (time.time() < timelimit) and self.config['imu'] < DISABLED:
@@ -426,7 +436,8 @@ class BrickPiInterface():
             totaldegreesrotated += (time.time() - lastrun)*gyrospeed
         self.CurrentCommand = "stop"
         bp.set_motor_power(self.largemotors, 0) #stop
-        return
+        elapsedtime = time.time() - starttime
+        return elapsedtime
 
     #rotates the robot until faces targetheading - only works for a heading between 0 - 360
     def rotate_power_heading_IMU(self, power, targetheading, marginoferror=3):
@@ -448,7 +459,9 @@ class BrickPiInterface():
             symbol = '>='; limit = targetheading+marginoferror; 
         expression = 'heading' + symbol + 'limit'
         self.log('heading'+symbol+str(limit))
-        timelimit = time.time() + self.timelimit
+        
+        elapsedtime = 0; starttime = time.time(); timelimit = starttime + self.timelimit
+         
         #start rotating until heading is reached
         while (eval(expression) and (self.CurrentCommand != "stop") and time.time() < timelimit) and self.config['imu'] < DISABLED:
             bp.set_motor_power(self.rightmotor, -power)
@@ -457,7 +470,8 @@ class BrickPiInterface():
             self.log("Current heading: " + str(heading))
         self.CurrentCommand = "stop"
         bp.set_motor_power(self.largemotors, 0) #stop
-        return
+        elapsedtime = time.time() - starttime
+        return elapsedtime
 
     #moves the target class to the target degrees
     def __move_claw_targetdegrees(self, degrees):
@@ -476,32 +490,15 @@ class BrickPiInterface():
         expression = 'currentdegrees' + symbol + 'limit'
         currentdegrees = bp.get_motor_encoder(self.mediummotor)
 
-        timelimit = time.time() + self.timelimit/2
+        elapsedtime = 0; starttime = time.time(); timelimit = starttime + self.timelimit
         while (eval(expression) and (self.CurrentCommand != "stop") and (time.time() < timelimit)):
             currentdegrees = bp.get_motor_encoder(self.mediummotor) #where is the current angle
             bp.set_motor_position(self.mediummotor, degrees)
             currentdegrees = bp.get_motor_encoder(self.mediummotor) #ACCURACY PROBLEM
         self.CurrentCommand = "stop"
         bp.set_motor_power(self.mediummotor, 0)
-        return
-
-    #open the claw
-    def open_claw(self, degrees=-1100):
-        self.CurrentCommand = 'open claw'
-        if self.claw_closed == True:
-            self.__move_claw_targetdegrees(degrees)
-            self.claw_closed = False
-            self.CurrentCommand = 'stop'
-        return
-
-    #close the claw
-    def close_claw(self, degrees=1100):
-        self.CurrentCommand = 'close claw'
-        if self.claw_closed == False:
-            self.__move_claw_targetdegrees(degrees)
-            self.claw_closed = True   
-            self.CurrentCommand = 'stop'
-        return
+        elapsedtime = time.time() - starttime
+        return elapsedtime
 
     #log out whatever !!!!!THIS IS NOT WORKING UNLESS FLASK LOG USED, DONT KNOW WHY!!!!!
     def log(self, message):
@@ -513,7 +510,25 @@ class BrickPiInterface():
         bp = self.BP
         bp.set_motor_power(self.largemotors+self.mediummotor, 0)
         self.CurrentCommand = "stop"
-        return      
+        return
+        
+    #open the claw
+    def open_claw(self, degrees=-1200):
+        self.CurrentCommand = 'open claw'
+        if self.claw_closed == True:
+            self.__move_claw_targetdegrees(degrees)
+            self.claw_closed = False
+            self.CurrentCommand = 'stop'
+        return
+
+    #close the claw
+    def close_claw(self, degrees=1200):
+        self.CurrentCommand = 'close claw'
+        if self.claw_closed == False:
+            self.__move_claw_targetdegrees(degrees)
+            self.claw_closed = True   
+            self.CurrentCommand = 'stop'
+        return
 
     #returns the current command
     def get_current_command(self):
@@ -543,6 +558,7 @@ class BrickPiInterface():
         bp.reset_all() # Unconfigure the sensors, disable the motors
         time.sleep(2) #gives time to reset??
         return
+        
     
 #--------------------------------------------------------------------
 # Only execute if this is the main file, good for testing code
@@ -551,7 +567,6 @@ if __name__ == '__main__':
     logger = logging.getLogger()
     robot.set_log(logger)
     robot.calibrate_imu(timelimit=10) #calibration might requirement movement
-    robot.log(robot.get_all_sensors())
-    robot.move_power_untildistanceto(30,10)
+    input("Press any key to test: ")
     robot.safe_exit()
 
