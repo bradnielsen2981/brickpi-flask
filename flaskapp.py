@@ -5,24 +5,32 @@ import yourrobot #import in your own robot functionality
 from interfaces.databaseinterface import DatabaseHelper
 from datetime import datetime
 
-#Create the database
-database = DatabaseHelper('test.sqlite')
-
-#Create Robot first. It take 4 seconds to initialise the robot, sensor view wont work until robot is created...
-robot = yourrobot.Robot()
-if robot.get_battery() < 6: #the robot motors will disable at 6 volts
-    robot.safe_exit()
-robot.set_database(database) #store a handle to the database inside the robot
+ROBOTENABLED = True #this can be used to disable the robot and still edit the webserver
+POWER = 30 #constant power/speed
 
 #Global Variables
 app = Flask(__name__)
 SECRET_KEY = 'my random key can be anything' #this is used for encrypting sessions
 app.config.from_object(__name__) #Set app configuration using above SETTINGS
-robot.set_log(app.logger) #set the logger inside the robot
-database.set_log(app.logger) #set the logger inside the database
-POWER = 30 #constant power/speed
 
-#Request Handlers ---------------------------------------------
+#Create the Database
+database = DatabaseHelper('test.sqlite')
+database.set_log(app.logger) #set the logger inside the database
+
+#Create the Robot
+robot = None
+if ROBOTENABLED:
+    #Create Robot first. It take 4 seconds to initialise the robot, sensor view wont work until robot is created...
+    robot = yourrobot.Robot()
+    robot.set_log(app.logger) #set the logger inside the robot
+    if robot.get_battery() < 6: #the robot motors will disable at 6 volts
+        robot.safe_exit()
+        ROBOTENABLED = False
+    else:
+        ROBOTENABLED = robot.Configured #if the robot didnt load disable robot, otherwise Robot is enabled
+        robot.set_database(database) #store a handle to the database inside the robot
+
+#-----------------HTML REQUEST HANDLERS----------------------------------#
 #home page and login
 @app.route('/', methods=['GET','POST'])
 def index():
@@ -45,50 +53,55 @@ def index():
         flash("No data submitted")
     return render_template('index.html')
 
-#home page
+#mission control
 @app.route('/missioncontrol')
 def missioncontrol():
     if 'userid' not in session:
         return redirect('./') #no form data is carried across using 'dot/'
-    results = None
-    return render_template("missioncontrol.html", configured = robot.Configured, voltage = robot.get_battery())
-
-#dashboard
-@app.route('/sensorview', methods=['GET','POST'])
-def sensorview():
-    if not robot.Configured: #make sure robot is
-        return redirect('./')
-    if 'userid' not in session:
-        return redirect('./')
-    return render_template("sensorview.html", configured = robot.Configured)
-
-#get all stats and return through JSON
-@app.route('/getallstats', methods=['GET','POST'])
-def getallstats():
-    results = robot.get_all_sensors()
-    return jsonify(results)
+    voltage = None;
+    if ROBOTENABLED:
+        voltage = robot.get_battery()
+    return render_template("missioncontrol.html", configured = ROBOTENABLED, voltage = voltage)
 
 #map or table of fire and path data
-@app.route('/map')
-def map():
-    if not robot.Configured: #make sure robot is
-        return redirect('./')
+@app.route('/missionhistory')
+def missionhistory():
     if 'userid' not in session:
         return redirect('./') #no form data is carried across using 'dot/'
     results = None
-    return render_template('map.html', results=results, configured = robot.Configured)
+    if ROBOTENABLED: #make sure robot is
+        pass
+    return render_template('missionhistory.html', results=results, configured = ROBOTENABLED)
+
+#sensor view
+@app.route('/sensorview', methods=['GET','POST'])
+def sensorview():
+    if 'userid' not in session:
+        return redirect('./')
+    if ROBOTENABLED: #make sure robot is
+        pass
+    return render_template("sensorview.html", configured = ROBOTENABLED)
+
+
+#----------------JSON REQUEST HANDLERS--------------------#
+#get all stats and return through JSON
+@app.route('/getallstats', methods=['GET','POST'])
+def getallstats():
+    results=None
+    if ROBOTENABLED: #make sure robot is
+        results = robot.get_all_sensors()
+    return jsonify(results)
 
 #start robot moving
 @app.route('/start', methods=['GET','POST'])
 def start():
-    if not robot.Configured: #make sure robot is
-        return jsonify({ "message":"robot not yet configured"})
-    robot.CurrentCommand = "start"
-    duration = None
-    duration = robot.move_power_untildistanceto(POWER,20)
-    return jsonify({ "message":"starting", "duration":duration }) #jsonify take any type and makes a JSON 
+    collisiondata = None
+    if ROBOTENABLED: #make sure robot is
+        #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime} 
+        collisiondata = robot.move_power_untildistanceto(POWER,20,4) #use a third number if you need to correct a dev
+    return jsonify({ "message":"collision detected", "collisiondata":collisiondata }) #jsonify take any type and makes a JSON 
 
-#creates a route to get all the event data
+#creates a route to get all the user data
 @app.route('/getallusers', methods=['GET','POST'])
 def getallusers():
     results = database.ViewQueryHelper("SELECT * FROM users")
@@ -97,45 +110,63 @@ def getallusers():
 #Get the current command from brickpiinterface.py
 @app.route('/getcurrentcommand', methods=['GET','POST'])
 def getcurrentcommand():
-    return jsonify({"currentcommand":robot.CurrentCommand})
+    currentcommand = None
+    if ROBOTENABLED:
+        currentcommand = robot.CurrentCommand    
+    return jsonify({"currentcommand":currentcommand})
 
 #get the current routine from robot.py
 @app.route('/getcurrentroutine', methods=['GET','POST'])
 def getcurrentroutine():
-    return jsonify({"currentroutine":robot.CurrentRoutine})
+    currentroutine= None
+    if ROBOTENABLED:
+        currentroutine = robot.CurrentRoutine
+    return jsonify({"currentroutine":currentroutine})
 
 #get the configuration status from brickpiinterface
 @app.route('/getconfigured', methods=['GET','POST'])
 def getconfigured():
-    return jsonify({"configured":robot.Configured})
+    return jsonify({"configured":ROBOTENABLED})
 
 #Start callibration of the IMU sensor
 @app.route('/getcalibration', methods=['GET','POST'])
 def getcalibration():
-    calibration = "Not Calibrated"
-    if robot.calibrate_imu():
-        calibration = "Calibrated"
+    calibration = None
+    if ROBOTENABLED:
+        if not robot.Calibrated:
+            calibration = robot.calibrate_imu()
     return jsonify({"calibration":calibration})
 
 #Start callibration of the IMU sensor
 @app.route('/reconfigIMU', methods=['GET','POST'])
 def reconfigIMU():
-    robot.reconfig_IMU()
-    return jsonify({"reconfigure":"reconfiguring_IMU"})
+    if ROBOTENABLED:
+        robot.reconfig_IMU()
+    return jsonify({"message":"reconfiguring_IMU"})
 
 #Stop current process
 @app.route('/stop', methods=['GET','POST'])
 def stop():
-    robot.stop_all()
+    if ROBOTENABLED:
+        robot.stop_all()
     return jsonify({ "message":"stopping" })
 
 #Shutdown the web server
 @app.route('/shutdown', methods=['GET','POST'])
 def shutdown():
-    robot.safe_exit()
+    if ROBOTENABLED:
+        robot.safe_exit()
     func = request.environ.get('werkzeug.server.shutdown')
     func()
     return jsonify({ "message":"shutting down" })
+
+#An example of how to receive data from a JSON object
+@app.route('/defaultdatahandler', methods=['GET','POST'])
+def defaultdatahandler():
+    if request.method == 'POST':
+        var1 = request.form.get('var1')
+        var2 = request.form.get('var2')
+    return jsonify({"message":"just an example"})
 
 #Log a message
 def log(message):

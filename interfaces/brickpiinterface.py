@@ -23,11 +23,12 @@ class BrickPiInterface():
     def __init__(self, timelimit=20):
         self.logger = None
         self.CurrentCommand = "loading"
-        self.Configured = False #is the robot yet configured?
+        self.Configured = False #is the robot yet Configured?
         self.BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3
         self.timelimit = timelimit #failsafe timelimit - motors turn off after
         self.imu_status = 0 
         self.set_ports()
+        self.Calibrated = False
         self.CurrentCommand = "loaded" #when the device is ready for a new instruction it will be set to stop
         return
 
@@ -49,7 +50,7 @@ class BrickPiInterface():
     #-- Configure Sensors - take 4 seconds ---------#
     def configure_sensors(self):
         bp = self.BP
-        self.config = {} #create a dictionary that represents if the sensor is configured
+        self.config = {} #create a dictionary that represents if the sensor is Configured
         #set up colour sensor
         try:
             bp.set_sensor_type(self.colour, bp.SENSOR_TYPE.EV3_COLOR_COLOR)
@@ -85,7 +86,7 @@ class BrickPiInterface():
             self.config['imu'] = DISABLED   
         
         bp.set_motor_limits(self.mediummotor, 100, 600) #set power / speed limit 
-        self.Configured = True #there is a 4 second delay - before robot is configured
+        self.Configured = True #there is a 4 second delay - before robot is Configured
         return
 
     #-- Start Infrared I2c Thread ---------#
@@ -133,6 +134,7 @@ class BrickPiInterface():
                 ifMutexRelease(USEMUTEX)
         if self.imu_status == 3:
             self.log("IMU Compass Sensor has been calibrated")
+            self.Calibrated = True
             return True
         else:
             self.log("Calibration unsuccessful")
@@ -342,19 +344,22 @@ class BrickPiInterface():
 
     #--------------MOTOR COMMANDS-----------------#
     #simply turns motors on
-    def move_power(self, power):
+    def move_power(self, power, deviation=0):
         bp = self.BP
         self.CurrentCommand = "move_power"
-        self.BP.set_motor_power(self.largemotors, power)
+        bp.set_motor_power(self.rightmotor, power)
+        bp.set_motor_power(self.leftmotor, power + deviation)
         return
 
     #moves for the specified time (seconds) and power - use negative power to reverse
-    def move_power_time(self, power, t):
+    def move_power_time(self, power, t, deviation=0):
         bp = self.BP
         self.CurrentCommand = "move_power_time"
         timelimit = time.time() + t
+        bp.set_motor_power(self.rightmotor, power)
+        bp.set_motor_power(self.leftmotor, power + deviation)
         while time.time() < timelimit and self.CurrentCommand != "stop":
-            bp.set_motor_power(self.largemotors, power)
+            continue
         self.CurrentCommand = "stop"
         self.BP.set_motor_power(self.largemotors, 0)
         return
@@ -362,7 +367,7 @@ class BrickPiInterface():
     
     #UPDATED THIS FUNCTION SINCE INTERFACE TEMPLATE WAS GIVEN
     #moves forward until a colour or an object is detected- return collisiontype
-    def move_power_untildistanceto(self, power, distanceto):
+    def move_power_untildistanceto(self, power, distanceto, deviation=0):
         if self.config['ultra'] >= DISABLED:
             return 0
         self.CurrentCommand = "move_power_untildistanceto"
@@ -371,7 +376,8 @@ class BrickPiInterface():
         elapsedtime = 0; starttime = time.time(); timelimit = starttime + self.timelimit  #all timelimits are a backup plan
         collisiontype = None
         #Turn motors on
-        bp.set_motor_power(self.largemotors, power)
+        bp.set_motor_power(self.rightmotor, power)
+        bp.set_motor_power(self.leftmotor, power + deviation)
         while (self.CurrentCommand != "stop" and time.time() < timelimit):
 
             ##if sensor fails, or distanceto has been reached quit, or distancedetected = 0
