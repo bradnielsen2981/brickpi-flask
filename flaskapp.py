@@ -58,7 +58,7 @@ def index():
 def missioncontrol():
     if 'userid' not in session:
         return redirect('./') #no form data is carried across using 'dot/'
-    voltage = None;
+    voltage = None
     if ROBOTENABLED:
         voltage = robot.get_battery()
     return render_template("missioncontrol.html", configured = ROBOTENABLED, voltage = voltage)
