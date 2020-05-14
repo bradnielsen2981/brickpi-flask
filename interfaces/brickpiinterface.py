@@ -392,7 +392,7 @@ class BrickPiInterface():
             if colour == "Red":
                 collisiontype = "junctiondetected"
                 break
-            elif colour == "Yellow":
+            elif colour == "Green":
                 collisiontype = "searchareadetected"
                 break
             
