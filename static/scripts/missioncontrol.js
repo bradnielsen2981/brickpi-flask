@@ -21,8 +21,8 @@ function get_current_command() {
 function sendtodefaulthandler() {
     if (shutdown == false)
     {
-        params = { "name":"John", "age":30, "car":null };
-        JSONrequest('/sendtodefaulthandler','POST', writecurrentcommand, params); //Once data is received it is passed to the writecurrentcommand
+        params = { "var1":"John", "var2":30 };
+        JSONrequest('/defaultdatahandler','POST', writecurrentcommand, params); //Once data is received it is passed to the writecurrentcommand
     }
 }
 
