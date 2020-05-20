@@ -30,7 +30,6 @@ class BrickPiInterface():
         self.set_ports()
         self.Calibrated = False
         self.CurrentCommand = "loaded" #when the device is ready for a new instruction it will be set to stop
-        self.CurrentRoutine = "loading"
         return
 
     #--- Initialise Ports --------#
@@ -88,7 +87,6 @@ class BrickPiInterface():
         
         bp.set_motor_limits(self.mediummotor, 100, 600) #set power / speed limit 
         self.Configured = True #there is a 4 second delay - before robot is Configured
-        self.CurrentRoutine = "ready"
         return
 
     #-- Start Infrared I2c Thread ---------#
@@ -561,7 +559,6 @@ class BrickPiInterface():
     def safe_exit(self):
         bp = self.BP
         self.CurrentCommand = 'exit' #should exit thread
-        self.CurrentRoutine = 'exiting'
         self.stop_all() #stop all motors
         self.log("Exiting")
         bp.reset_all() # Unconfigure the sensors, disable the motors
