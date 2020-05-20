@@ -17,6 +17,15 @@ function get_current_command() {
     }
 }
 
+//THis recurring function gets data using JSON
+function sendtodefaulthandler() {
+    if (shutdown == false)
+    {
+        params = { "name":"John", "age":30, "car":null };
+        JSONrequest('/sendtodefaulthandler','POST', writecurrentcommand, params); //Once data is received it is passed to the writecurrentcommand
+    }
+}
+
 //with received json data, send to page
 function writecurrentcommand(results) {
     document.getElementById('message').innerHTML = results.currentcommand;
