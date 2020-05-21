@@ -148,6 +148,8 @@ def reconfigIMU():
 @app.route('/stop', methods=['GET','POST'])
 def stop():
     if ROBOTENABLED:
+        robot.CurrentRoutine = "ready"
+        robot.CurrentCommand = "stop"
         robot.stop_all()
     return jsonify({ "message":"stopping" })
 
