@@ -21,7 +21,7 @@ class BrickPiInterface():
 
     #Initialise log and timelimit
     def __init__(self, timelimit=20):
-        self.logger = None
+        self.logger = logging.getLogger()
         self.CurrentCommand = "loading"
         self.Configured = False #is the robot yet Configured?
         self.BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3
@@ -257,7 +257,7 @@ class BrickPiInterface():
         ifMutexAcquire(USEMUTEX)
         try:
             distance = bp.get_sensor(self.ultra)
-            time.sleep(0.3)
+            time.sleep(0.1)
             self.config['ultra'] = ENABLED
         except brickpi3.SensorError as error:
             self.log("ULTRASONIC: " + str(error))
