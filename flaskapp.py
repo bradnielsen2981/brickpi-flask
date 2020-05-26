@@ -148,7 +148,7 @@ def start():
     collisiondata = None
     if ROBOTENABLED: #make sure robot is
         #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime} 
-        collisiondata = move_power(-POWER,0.5) #reverse
+        collisiondata = move_power_time(-POWER,2,0.5) #reverse
     return jsonify({ "message":"collision detected", "collisiondata":collisiondata }) #jsonify take any type and makes a JSON
 
 
