@@ -1,3 +1,4 @@
+#Importing libraries
 from flask import Flask, render_template, jsonify, redirect, request, session, flash
 import logging #allow loggings
 import time, sys, json
@@ -30,11 +31,18 @@ if ROBOTENABLED:
         ROBOTENABLED = robot.Configured #if the robot didnt load disable robot, otherwise Robot is enabled
         robot.set_database(database) #store a handle to the database inside the robot
 
+
+
+
+
+
 #-----------------HTML REQUEST HANDLERS----------------------------------#
 
+
+
 #---Page Request Handlers---#
-#home page and login
-@app.route('/', methods=['GET','POST'])
+
+@app.route('/', methods=['GET','POST']) #home page and login
 def index():
     if 'userid' in session:
         return redirect('./missioncontrol') #no form data is carried across using 'dot/'
@@ -55,8 +63,8 @@ def index():
         flash("No data submitted")
     return render_template('index.html')
 
-#mission control
-@app.route('/missioncontrol')
+
+@app.route('/missioncontrol') #mission control
 def missioncontrol():
     if 'userid' not in session:
         return redirect('./') #no form data is carried across using 'dot/'
@@ -65,8 +73,8 @@ def missioncontrol():
         voltage = robot.get_battery()
     return render_template("missioncontrol.html", configured = ROBOTENABLED, voltage = voltage)
 
-#map or table of fire and path data
-@app.route('/missionhistory')
+
+@app.route('/missionhistory') #map or table of fire and path data
 def missionhistory():
     if 'userid' not in session:
         return redirect('./') #no form data is carried across using 'dot/'
@@ -75,73 +83,39 @@ def missionhistory():
         pass
     return render_template('missionhistory.html', results=results, configured = ROBOTENABLED)
 
-#sensor view
-@app.route('/sensorview', methods=['GET','POST'])
+
+@app.route('/sensorview', methods=['GET','POST'])#sensor view
 def sensorview():
     if 'userid' not in session:
         return redirect('./')
     if ROBOTENABLED: #make sure robot is
         pass
     return render_template("sensorview.html", configured = ROBOTENABLED)
-#--End Page Request Handlers--#
+
+
+
+#-------------END HTML REQUEST HANDLERS----------------------------------#
+
+
+
+
 
 
 #----------------JSON REQUEST HANDLERS--------------------#
-#get all stats and return through JSON
-@app.route('/getallstats', methods=['GET','POST'])
+
+
+
+#--Sensor Handlers--#
+
+@app.route('/getallstats', methods=['GET','POST'])#get all stats and return through JSON
 def getallstats():
     results=None
     if ROBOTENABLED: #make sure robot is
         results = robot.get_all_sensors()
     return jsonify(results)
 
-#Moves robot foward
-@app.route('/foward', methods=['GET','POST'])
-def start():
-    collisiondata = None
-    if ROBOTENABLED: #make sure robot is
-        #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime} 
-        collisiondata = robot.move_power_untildistanceto(POWER,20,4) #use a third number if you need to correct a dev
-    return jsonify({ "message":"collision detected", "collisiondata":collisiondata }) #jsonify take any type and makes a JSON 
 
-#Moves robot backwards
-@app.route('/reverse', methods=['GET','POST'])
-def start():
-    collisiondata = None
-    if ROBOTENABLED: #make sure robot is
-        #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime} 
-        collisiondata = move_power(-POWER,0.5) #reverses
-    return jsonify({ "message":"collision detected", "collisiondata":collisiondata }) #jsonify take any type and makes a JSON
-
-#creates a route to get all the user data
-@app.route('/getallusers', methods=['GET','POST'])
-def getallusers():
-    results = database.ViewQueryHelper("SELECT * FROM users")
-    return jsonify([dict(row) for row in results]) #jsonify doesnt work with an SQLite.Row
-
-#Get the current command from brickpiinterface.py
-@app.route('/getcurrentcommand', methods=['GET','POST'])
-def getcurrentcommand():
-    currentcommand = None
-    if ROBOTENABLED:
-        currentcommand = robot.CurrentCommand    
-    return jsonify({"currentcommand":currentcommand})
-
-#get the current routine from robot.py
-@app.route('/getcurrentroutine', methods=['GET','POST'])
-def getcurrentroutine():
-    currentroutine= None
-    if ROBOTENABLED:
-        currentroutine = robot.CurrentRoutine
-    return jsonify({"currentroutine":currentroutine})
-
-#get the configuration status from brickpiinterface
-@app.route('/getconfigured', methods=['GET','POST'])
-def getconfigured():
-    return jsonify({"configured":ROBOTENABLED})
-
-#Start callibration of the IMU sensor
-@app.route('/getcalibration', methods=['GET','POST'])
+@app.route('/getcalibration', methods=['GET','POST'])#Start callibration of the IMU sensor
 def getcalibration():
     calibration = None
     if ROBOTENABLED:
@@ -149,15 +123,69 @@ def getcalibration():
             calibration = robot.calibrate_imu()
     return jsonify({"calibration":calibration})
 
-#Start callibration of the IMU sensor
-@app.route('/reconfigIMU', methods=['GET','POST'])
+
+@app.route('/reconfigIMU', methods=['GET','POST'])#Reconfigure IMU sensor
 def reconfigIMU():
     if ROBOTENABLED:
         robot.reconfig_IMU()
     return jsonify({"message":"reconfiguring_IMU"})
 
-#Stop current process
-@app.route('/stop', methods=['GET','POST'])
+
+
+#--Movement Handlers--#
+
+@app.route('/foward', methods=['GET','POST'])#Moves robot foward
+def start():
+    collisiondata = None
+    if ROBOTENABLED: #make sure robot is
+        #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime} 
+        collisiondata = robot.move_power_untildistanceto(POWER,20,4) #use a third number if you need to correct a dev
+    return jsonify({ "message":"collision detected", "collisiondata":collisiondata }) #jsonify take any type and makes a JSON 
+
+
+@app.route('/reverse', methods=['GET','POST'])#Moves robot backwards
+def start():
+    collisiondata = None
+    if ROBOTENABLED: #make sure robot is
+        #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime} 
+        collisiondata = move_power(-POWER,0.5) #reverse
+    return jsonify({ "message":"collision detected", "collisiondata":collisiondata }) #jsonify take any type and makes a JSON
+
+
+
+#--Database Handlers--#
+
+@app.route('/getallusers', methods=['GET','POST'])#creates a route to get all the user data
+def getallusers():
+    results = database.ViewQueryHelper("SELECT * FROM users")
+    return jsonify([dict(row) for row in results]) #jsonify doesnt work with an SQLite.Row
+
+
+
+#--Miscellaneous Request Handlers--#
+
+@app.route('/getcurrentcommand', methods=['GET','POST'])#Get the current command from brickpiinterface.py
+def getcurrentcommand():
+    currentcommand = None
+    if ROBOTENABLED:
+        currentcommand = robot.CurrentCommand    
+    return jsonify({"currentcommand":currentcommand})
+
+
+@app.route('/getcurrentroutine', methods=['GET','POST'])#get the current routine from robot.py
+def getcurrentroutine():
+    currentroutine= None
+    if ROBOTENABLED:
+        currentroutine = robot.CurrentRoutine
+    return jsonify({"currentroutine":currentroutine})
+
+
+@app.route('/getconfigured', methods=['GET','POST'])#get the configuration status from brickpiinterface
+def getconfigured():
+    return jsonify({"configured":ROBOTENABLED})
+
+
+@app.route('/stop', methods=['GET','POST'])#Stop current process
 def stop():
     if ROBOTENABLED:
         robot.CurrentRoutine = "ready"
@@ -165,8 +193,8 @@ def stop():
         robot.stop_all()
     return jsonify({ "message":"stopping" })
 
-#Shutdown the web server
-@app.route('/shutdown', methods=['GET','POST'])
+
+@app.route('/shutdown', methods=['GET','POST'])#Shutdown the web server
 def shutdown():
     if ROBOTENABLED:
         robot.safe_exit()
@@ -174,13 +202,19 @@ def shutdown():
     func()
     return jsonify({ "message":"shutting down" })
 
-#An example of how to receive data from a JSON object
-@app.route('/defaultdatahandler', methods=['GET','POST'])
+
+@app.route('/defaultdatahandler', methods=['GET','POST'])#An example of how to receive data from a JSON object
 def defaultdatahandler():
     if request.method == 'POST':
         var1 = request.form.get('var1')
         var2 = request.form.get('var2')
     return jsonify({"message":"just an example"})
+
+
+
+#------------END JSON REQUEST HANDLERS--------------------#
+
+
 
 #Log a message
 def log(message):
