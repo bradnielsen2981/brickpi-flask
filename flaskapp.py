@@ -31,6 +31,8 @@ if ROBOTENABLED:
         robot.set_database(database) #store a handle to the database inside the robot
 
 #-----------------HTML REQUEST HANDLERS----------------------------------#
+
+#---Page Request Handlers---#
 #home page and login
 @app.route('/', methods=['GET','POST'])
 def index():
@@ -81,6 +83,7 @@ def sensorview():
     if ROBOTENABLED: #make sure robot is
         pass
     return render_template("sensorview.html", configured = ROBOTENABLED)
+#--End Page Request Handlers--#
 
 
 #----------------JSON REQUEST HANDLERS--------------------#
@@ -92,14 +95,23 @@ def getallstats():
         results = robot.get_all_sensors()
     return jsonify(results)
 
-#start robot moving
-@app.route('/start', methods=['GET','POST'])
+#Moves robot foward
+@app.route('/foward', methods=['GET','POST'])
 def start():
     collisiondata = None
     if ROBOTENABLED: #make sure robot is
         #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime} 
         collisiondata = robot.move_power_untildistanceto(POWER,20,4) #use a third number if you need to correct a dev
     return jsonify({ "message":"collision detected", "collisiondata":collisiondata }) #jsonify take any type and makes a JSON 
+
+#Moves robot backwards
+@app.route('/reverse', methods=['GET','POST'])
+def start():
+    collisiondata = None
+    if ROBOTENABLED: #make sure robot is
+        #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime} 
+        collisiondata = move_power(-POWER,0.5) #reverses
+    return jsonify({ "message":"collision detected", "collisiondata":collisiondata }) #jsonify take any type and makes a JSON
 
 #creates a route to get all the user data
 @app.route('/getallusers', methods=['GET','POST'])
