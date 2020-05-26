@@ -21,7 +21,7 @@ class BrickPiInterface():
 
     #Initialise log and timelimit
     def __init__(self, timelimit=20):
-        self.logger = None
+        self.logger = logging.getLogger()
         self.CurrentCommand = "loading"
         self.Configured = False #is the robot yet Configured?
         self.BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3
@@ -108,7 +108,7 @@ class BrickPiInterface():
 
     #self.log out a complete output from the IMU sensor
     def calibrate_imu(self, timelimit=20):
-        if self.config['imu'] >= DISABLED:
+        if self.config['imu'] >= DISABLED or not self.Configured:
             return
         self.stop_all() #stop everything while calibrating...
         self.CurrentCommand = "calibrate_imu"
@@ -158,7 +158,7 @@ class BrickPiInterface():
     #returns the compass value from the IMU sensor - note if the IMU is placed near a motor it can be affected -SEEMS TO RETURN A VALUE BETWEEN -180 and 180. 
     def get_compass_IMU(self):
         heading = NOREADING
-        if self.config['imu'] >= DISABLED:
+        if self.config['imu'] >= DISABLED or not self.Configured:
             return heading
         ifMutexAcquire(USEMUTEX)
         try:
@@ -181,7 +181,7 @@ class BrickPiInterface():
     #returns the absolute orientation value using euler rotations, I think this is calilbrated from the compass sensor and therefore requires calibration
     def get_orientation_IMU(self):
         readings = (NOREADING,NOREADING,NOREADING)
-        if self.config['imu'] >= DISABLED:
+        if self.config['imu'] >= DISABLED or not self.Configured:
             return readings
         ifMutexAcquire(USEMUTEX)
         try:
@@ -198,7 +198,7 @@ class BrickPiInterface():
     #returns the acceleration from the IMU sensor - could be useful for detecting collisions or an involuntary stop
     def get_linear_acceleration_IMU(self):
         readings = (NOREADING,NOREADING,NOREADING)
-        if self.config['imu'] >= DISABLED:
+        if self.config['imu'] >= DISABLED or not self.Configured:
             return readings
         ifMutexAcquire(USEMUTEX)
         try:
@@ -217,7 +217,7 @@ class BrickPiInterface():
     #get the gyro sensor angle/seconds acceleration from IMU sensor
     def get_gyro_sensor_IMU(self):
         gyro_readings = (NOREADING,NOREADING,NOREADING)
-        if self.config['imu'] >= DISABLED:
+        if self.config['imu'] >= DISABLED or not self.Configured:
             return gyro_readings
         ifMutexAcquire(USEMUTEX)
         try:
@@ -234,7 +234,7 @@ class BrickPiInterface():
     #gets the temperature using the IMU sensor
     def get_temperature_IMU(self):
         temp = NOREADING
-        if self.config['imu'] >= DISABLED:
+        if self.config['imu'] >= DISABLED or not self.Configured:
             return temp
         ifMutexAcquire(USEMUTEX)
         try:
@@ -251,13 +251,13 @@ class BrickPiInterface():
     #get the ultrasonic sensor
     def get_ultra_sensor(self):
         distance = NOREADING
-        if self.config['ultra'] >= DISABLED:
+        if self.config['ultra'] >= DISABLED or not self.Configured:
             return distance
         bp = self.BP
         ifMutexAcquire(USEMUTEX)
         try:
             distance = bp.get_sensor(self.ultra)
-            time.sleep(0.3)
+            time.sleep(0.1)
             self.config['ultra'] = ENABLED
         except brickpi3.SensorError as error:
             self.log("ULTRASONIC: " + str(error))
@@ -268,7 +268,7 @@ class BrickPiInterface():
 
     #returns the colour current sensed - "none", "Black", "Blue", "Green", "Yellow", "Red", "White", "Brown"
     def get_colour_sensor(self):
-        if self.config['colour'] >= DISABLED:
+        if self.config['colour'] >= DISABLED or not self.Configured:
             return "NOREADING"
         bp = self.BP
         value = 0
@@ -316,7 +316,7 @@ class BrickPiInterface():
     #return the infrared temperature - if usethread=True - it uses the thread set up in init
     def get_thermal_sensor(self, usethread=True):
         temp = NOREADING
-        if self.config['thermal'] >= DISABLED:
+        if self.config['thermal'] >= DISABLED or not self.Configured:
             return temp
         bp = self.BP
         if not usethread:
@@ -368,7 +368,7 @@ class BrickPiInterface():
     #UPDATED THIS FUNCTION SINCE INTERFACE TEMPLATE WAS GIVEN
     #moves forward until a colour or an object is detected- return collisiontype
     def move_power_untildistanceto(self, power, distanceto, deviation=0):
-        if self.config['ultra'] >= DISABLED:
+        if self.config['ultra'] >= DISABLED or not self.Configured:
             return 0
         self.CurrentCommand = "move_power_untildistanceto"
         bp = self.BP
@@ -416,7 +416,7 @@ class BrickPiInterface():
     #Rotates the robot with power and degrees using the IMU sensor. Negative degrees = left.
     #the larger the number of degrees and the low the power, the more accurate
     def rotate_power_degrees_IMU(self, power, degrees, marginoferror=3):
-        if self.config['imu'] >= DISABLED:
+        if self.config['imu'] >= DISABLED or not self.Configured:
             return
         self.CurrentCommand = "rotate_power_degrees_IMU"
         bp = self.BP
@@ -447,7 +447,7 @@ class BrickPiInterface():
 
     #rotates the robot until faces targetheading - only works for a heading between 0 - 360
     def rotate_power_heading_IMU(self, power, targetheading, marginoferror=3):
-        if self.config['imu'] >= DISABLED:
+        if self.config['imu'] >= DISABLED or not self.Configured:
             return
         bp = self.BP
         self.CurrentCommand = "rotate_power_heading"
