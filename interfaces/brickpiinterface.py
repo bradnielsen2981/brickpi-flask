@@ -407,7 +407,7 @@ class BrickPiInterface():
         self.CurrentCommand = 'rotate_power_time'
         bp = self.bp
         bp.set_motor_power(self.rightmotor, power)#turns right motor
-        bp.set_motor_power(self.leftmotor, power)#turns left motor
+        bp.set_motor_power(self.leftmotor, -power)#turns left motor
         return
 
 
