@@ -373,6 +373,8 @@ class BrickPiInterface():
         self.CurrentCommand = "move_power_untildistanceto"
         bp = self.BP
         distancedetected = 300 # to set an initial distance detected before loop
+        startdistance = self.get_ultra_sensor()
+        elapseddistance = 0
         elapsedtime = 0; starttime = time.time(); timelimit = starttime + self.timelimit  #all timelimits are a backup plan
         collisiontype = None
         #Turn motors on
@@ -385,6 +387,7 @@ class BrickPiInterface():
             self.log("MOVING - Distance detected: " + str(distancedetected))
             if ((self.config['ultra'] > DISABLED) or (distancedetected < distanceto and distancedetected != 0.0)): 
                 collisiontype = "objectdetected"
+                elapseddistance = startdistance - distancedetected
                 break 
 
             ##insert other tests e.g if red colour
@@ -399,7 +402,7 @@ class BrickPiInterface():
         self.CurrentCommand = "stop"
         elapsedtime = time.time() - starttime
         bp.set_motor_power(self.largemotors, 0)
-        return {"collisiontype":collisiontype,"elapsedtime":elapsedtime}
+        return {"collisiontype":collisiontype,"elapsedtime":elapsedtime, "elapseddistance"=elapseddistance}
 
 
     #Simply rotates robot
