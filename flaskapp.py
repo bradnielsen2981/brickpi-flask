@@ -8,6 +8,7 @@ from datetime import datetime
 
 ROBOTENABLED = True #this can be used to disable the robot and still edit the webserver
 POWER = 30 #constant power/speed
+TPOWER = 20 #constant turning power
 
 #Global Variables
 app = Flask(__name__)
@@ -132,28 +133,111 @@ def reconfigIMU():
 
 
 
-#--Movement Handlers--#
+#--Actuator Handlers--#
 
+#Traversal handlers
+'''
 @app.route('/foward', methods=['GET','POST'])#Moves robot foward
-def start():
-    collisiondata = None
-    if ROBOTENABLED: #make sure robot is
-        #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime} 
-        collisiondata = robot.move_power_untildistanceto(POWER,20,4) #use a third number if you need to correct a dev
-    return jsonify({ "message":"collision detected", "collisiondata":collisiondata }) #jsonify take any type and makes a JSON 
+def forward(var,var_limit):
+    message = ''
+    if ROBOTENABLED:
+        robot.move_power(POWER,-0.5) #use a second number if you need to correct a deviation
+    return
 
 
-@app.route('/reverse', methods=['GET','POST'])#Moves robot backwards
-def start():
+@app.route('/backwards', methods=['GET','POST'])#Moves robot backwards
+def backwards(var,var_limit):
+    message =''
+    if ROBOTENABLED:
+        robot.move_power(-POWER,0.5)
+    return
+
+
+@app.route('/t.right', methods=['GET','POST'])#Rotates robot right
+def t.right():
+    message =''
+    if ROBOTENABLED:
+        robot.rotate_power(TPOWER)
+    return jsonify({"message"=message})
+
+
+@app.route('/t.left', methods=['GET','POST'])#Rotates robot left
+def t.left():
+    message = ''
+    if ROBOTENABLED:
+        robot.rotate_power(-1*TPOWER)
+    Return jsonify({"message"=message})
+'''
+
+
+#Complex movement
+@app.route('/right', methods=['GET','POST'])#Rotates 90degrees right
+def right():
+    if ROBOTENABLED:
+        robot.rotate_power_degrees_IMU(TPOWER, 90)
+        message = "90 Degree Right Turn"
+        return jsonify({"message":message})
+
+
+@app.route('/left', methods=['GET','POST'])#Rotates 90 degrees left
+def left():
+    if ROBOTENABLED:
+        robot.rotate_power_degrees_IMU(TPOWER, -90)
+        message = "90 Degree Left Turn"
+        return jsonify({"message"=message})
+
+
+@app.route('/turnaround', methods=['GET','POST'])#Rotates robot 180 degrees, turning robot around
+def turnaround():
+    if ROBOTENABLED:
+        robot.rotate_power_degrees_IMU(TPOWER, 180)
+        message = "180 Degree Turn Around"
+        return jsonify({"message"=message})
+
+
+@app.route('/reverse', methods=['GET','POST'])#Rotates robot 180 degrees, keeps moving until wall detected
+def reverse():
     collisiondata = None
     if ROBOTENABLED: #make sure robot is
+        robot.rotate_power_degrees_IMU(TPOWER, 180)
         #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime} 
         collisiondata = move_power_time(-POWER,2,0.5) #reverse
     return jsonify({ "message":"collision detected", "collisiondata":collisiondata }) #jsonify take any type and makes a JSON
 
 
+#Claw Handlers
+'''
+@app.route('/claw.open', methods=['GET','POST'])#Opens robot claw
+def claw.open():
+    if ROBOTENABLED:
+        
+    return
+
+
+@app.route('claw.close', methods=['GET','POST'])#Closes claw
+def claw.close():
+    if ROBOTENABLED:
+
+    return
+'''
+
 
 #--Database Handlers--#
+
+'''
+@app.route('/newdata', methods=['GET','POST'])#New database entry, modular handler allowing specified entry to specfied table
+def newdata():
+
+@app.route('getdata', methods=['GET','POST'])#Gets data from db, modular handler able to get specified data from specified location
+def getdata():
+
+@app.route('modifydata', methods=['GET','POST'])#Modifies data in db, modular handler
+def modifydata():
+
+@app.route('deletedata', methods=['GET','POST'])#Deletes data from db, modular handler
+def deletedata():
+'''
+
 
 @app.route('/getallusers', methods=['GET','POST'])#creates a route to get all the user data
 def getallusers():
@@ -191,7 +275,7 @@ def stop():
         robot.CurrentRoutine = "ready"
         robot.CurrentCommand = "stop"
         robot.stop_all()
-    return jsonify({ "message":"stopping" })
+    return jsonify({ "message":"Stopping" })
 
 
 @app.route('/shutdown', methods=['GET','POST'])#Shutdown the web server
