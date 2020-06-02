@@ -92,7 +92,7 @@ def sensorview():
     if ROBOTENABLED: #make sure robot is
         pass
     return render_template("sensorview.html", configured = ROBOTENABLED)
-
+ 
 
 
 #-------------END HTML REQUEST HANDLERS----------------------------------#
@@ -142,6 +142,7 @@ def forward(var,var_limit):
     message = ''
     if ROBOTENABLED:
         robot.move_power(POWER,-0.5) #use a second number if you need to correct a deviation
+        database.ModifyQueryHelper('INSERT INTO blah blah blah', (Pram1,Pram1,Pram1)) #Database Entry
     return
 
 
@@ -209,31 +210,37 @@ def reverse():
 '''
 @app.route('/claw.open', methods=['GET','POST'])#Opens robot claw
 def claw.open():
+    message = ''
     if ROBOTENABLED:
-        
-    return
+        robot.__move_claw_targetdegrees(#put in degrees needed#)
+    return jsonify({"message":message})
 
 
 @app.route('claw.close', methods=['GET','POST'])#Closes claw
 def claw.close():
+    message = ''
     if ROBOTENABLED:
-
-    return
+        robot.__move_claw_targetdegrees(#put in degrees needed#)
+    return jsonify({"message": message})
 '''
 
 
 #--Database Handlers--#
 
 '''
+#Insert Handlers
 @app.route('/newdata', methods=['GET','POST'])#New database entry, modular handler allowing specified entry to specfied table
 def newdata():
 
+#Select Handlers
 @app.route('getdata', methods=['GET','POST'])#Gets data from db, modular handler able to get specified data from specified location
 def getdata():
 
+#Modify Handlers
 @app.route('modifydata', methods=['GET','POST'])#Modifies data in db, modular handler
 def modifydata():
 
+#DeleteHandlers
 @app.route('deletedata', methods=['GET','POST'])#Deletes data from db, modular handler
 def deletedata():
 '''
