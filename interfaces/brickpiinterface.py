@@ -508,7 +508,7 @@ class BrickPiInterface():
 
     #log out whatever !!!!!THIS IS NOT WORKING UNLESS FLASK LOG USED, DONT KNOW WHY!!!!!
     def log(self, message):
-        self.logger.error(message)
+        self.logger.info(message)
         return
 
     #stop all motors and set command to stop
