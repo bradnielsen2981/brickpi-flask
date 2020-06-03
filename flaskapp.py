@@ -188,7 +188,7 @@ def forward():
     return jsonify({"Message":message, "collision data":collisiondata})
 
 
-@app.route('/backwards', methods=['GET','POST'])#Moves robot backwards
+@app.route('/backward', methods=['GET','POST'])#Moves robot backwards
 def backwards():
     message = None
     if ROBOTENABLED:
@@ -216,7 +216,7 @@ def backwards():
     return jsonify({"message": message})
 
 
-@app.route('/tright', methods=['GET','POST'])#Rotates robot right
+@app.route('/t_right', methods=['GET','POST'])#Rotates robot right
 def t_right():
     message =''
     if ROBOTENABLED:
@@ -243,7 +243,7 @@ def t_right():
     return jsonify({"message":message})
 
 
-@app.route('/tleft', methods=['GET','POST'])#Rotates robot left
+@app.route('/t_left', methods=['GET','POST'])#Rotates robot left
 def t_left():
     message = ''
     if ROBOTENABLED:
@@ -272,7 +272,7 @@ def t_left():
 
 #Claw Handlers
 
-@app.route('/clawopen', methods=['GET','POST'])#Opens robot claw
+@app.route('/claw_open', methods=['GET','POST'])#Opens robot claw
 def claw_open():
     message = ''
     if ROBOTENABLED:
@@ -283,7 +283,7 @@ def claw_open():
     return jsonify({"message": message})
 
 
-@app.route('clawclose', methods=['GET','POST'])#Closes claw
+@app.route('/claw_close', methods=['GET','POST'])#Closes claw
 def claw_close():
     message = ''
     if ROBOTENABLED:
