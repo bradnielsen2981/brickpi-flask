@@ -29,12 +29,12 @@ if ROBOTENABLED:
     #Create Robot first. It take 4 seconds to initialise the robot, sensor view wont work until robot is created...
     robot = yourrobot.Robot()
     robot.set_log(app.logger) #set the logger inside the robot
-    if robot.get_battery() < 6: #the robot motors will disable at 6 volts
+    '''if robot.get_battery() < 6: #the robot motors will disable at 6 volts
         robot.safe_exit()
         ROBOTENABLED = False
-    else:
-        ROBOTENABLED = robot.Configured #if the robot didnt load disable robot, otherwise Robot is enabled
-        robot.set_database(database) #store a handle to the database inside the robot
+    else:'''
+    ROBOTENABLED = robot.Configured #if the robot didnt load disable robot, otherwise Robot is enabled
+    robot.set_database(database) #store a handle to the database inside the robot
 
 
 
