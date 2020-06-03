@@ -405,15 +405,6 @@ class BrickPiInterface():
         return {"collisiontype":collisiontype,"elapsedtime":elapsedtime, "elapseddistance"=elapseddistance}
 
 
-    #Simply rotates robot
-    def rotate_power(self, power):
-        self.CurrentCommand = 'rotate_power_time'
-        bp = self.bp
-        bp.set_motor_power(self.rightmotor, power)#turns right motor
-        bp.set_motor_power(self.leftmotor, -power)#turns left motor
-        return
-
-
     #Rotate power and time, -power to reverse
     def rotate_power_time(self, power, t):
         self.CurrentCommand = "rotate_power_time"
@@ -426,6 +417,7 @@ class BrickPiInterface():
         self.CurrentCommand = 'stop'
         return
         
+ 
     #Rotates the robot with power and degrees using the IMU sensor. Negative degrees = left.
     #the larger the number of degrees and the low the power, the more accurate
     def rotate_power_degrees_IMU(self, power, degrees, marginoferror=3):
