@@ -12,7 +12,22 @@
     <div class="container">
         <div class="row text-center">
           <div class="col-4">
-            <button type="button" class="btn btn-success" onclick="JSONrequest('/start','POST')">Start</button>
+            <button type="button" class="btn btn-success" onclick="JSONrequest('/forward','POST')">Forward</button>
+          </div>
+          <div class="col-4">
+            <button type="button" class="btn btn-success" onclick="JSONrequest('/backwards','POST')">Reverse</button>
+          </div>
+          <div class="col-4">
+            <button type="button" class="btn btn-success" onclick="JSONrequest('/t_right','POST')">Right</button>
+          </div>
+          <div class="col-4">
+            <button type="button" class="btn btn-success" onclick="JSONrequest('/t_left','POST')">Left</button>
+          </div>
+          <div class="col-4">
+            <button type="button" class="btn btn-success" onclick="JSONrequest('/claw_open','POST')">Open Claw</button>
+          </div>
+          <div class="col-4">
+            <button type="button" class="btn btn-success" onclick="JSONrequest('/claw_close','POST')">Close Claw</button>
           </div>
           <div class="col-4">
             <button type="button" class="btn btn-danger" onclick="JSONrequest('/stop','POST')">Stop</button>

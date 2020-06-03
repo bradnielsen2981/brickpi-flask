@@ -71,6 +71,72 @@ class Robot(BrickPiInterface):
 
 
     #------------POSSIBLE FUNCTIONS TO USE OR OVERRIDE--------------------#
+    '''
+    #moves foward until variable limit reached
+    def move_power_until(self, var, deviation):
+        if self.config['ultra'] >= DISABLED or not self.Configured:#checking if ultrasonic sensor online
+            return 0
+        self.CurrentCommand = "move_power_until" #set command name
+        bp = self.BP
+        
+        #Local variables
+        distancedetected = 300 # to set an initial distance detected before loop
+        startdistance = self.get_ultra_sensor()
+        elapseddistance = 0
+        elapsedtime = 0; starttime = time.time(); timelimit = starttime + self.timelimit  #all timelimits are a backup plan
+        collisiontype = None
+        #Turn motors on
+        bp.set_motor_power(self.rightmotor, power)
+        bp.set_motor_power(self.leftmotor, power + deviation)
+        while (self.CurrentCommand != "stop" and time.time() < timelimit):
+
+            ##if sensor fails, or distanceto has been reached quit, or distancedetected = 0
+            distancedetected = self.get_ultra_sensor()
+            self.log("MOVING - Distance detected: " + str(distancedetected))
+            if ((self.config['ultra'] > DISABLED) or (distancedetected < distanceto and distancedetected != 0.0)): 
+                collisiontype = "objectdetected"
+                elapseddistance = startdistance - distancedetected
+                break 
+
+            ##insert other tests e.g if red colour
+            colour = self.get_colour_sensor()
+            if colour == "Red":
+                collisiontype = "junctiondetected"
+                break
+            elif colour == "Green":
+                collisiontype = "searchareadetected"
+                break
+            
+        self.CurrentCommand = "stop"
+        elapsedtime = time.time() - starttime
+        bp.set_motor_power(self.largemotors, 0)
+        return {"collisiontype":collisiontype,"elapsedtime":elapsedtime, "elapseddistance"=elapseddistance}
+    '''
+    
+    #Simply rotates robot
+    def rotate_power(self, power):
+        self.CurrentCommand = 'rotate_power'
+        bp = self.bp
+        bp.set_motor_power(self.rightmotor, power)#turns right motor
+        bp.set_motor_power(self.leftmotor, -power)#turns left motor
+        return
+    
+    #
+    def get_traversed_distance(self, distance_start):
+        distance_end = robot.get_ultra_sensor()
+        distance_traversed = distance_start - distance_end
+        if distance_traversed < 0:
+            distance_traversed = -1*distance_traversed
+        return(distance_traversed)
+
+    def get_rotated_heading(self, heading_start):
+        heading_end = robot.get_compass_IMU()
+        heading_traversed = heading_end - heading_start
+        if heading_traversed < 0:
+            heading_traversed = -1*heading_traversed
+        return(heading_traversed)
+    
+    
     #def calibrate_imu(self, timelimit=20)
 
     #def reconfig_IMU(self)

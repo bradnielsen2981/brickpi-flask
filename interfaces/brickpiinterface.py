@@ -344,7 +344,7 @@ class BrickPiInterface():
 
     #--------------MOTOR COMMANDS-----------------#
     #simply turns motors on
-    def move_power(self, power, deviation=0):
+    def move_power(self, power, deviation):
         bp = self.BP
         self.CurrentCommand = "move_power"
         bp.set_motor_power(self.rightmotor, power)
@@ -352,7 +352,7 @@ class BrickPiInterface():
         return
 
     #moves for the specified time (seconds) and power - use negative power to reverse
-    def move_power_time(self, power, t, deviation=0):
+    def move_power_time(self, power, t, deviation):
         bp = self.BP
         self.CurrentCommand = "move_power_time"
         timelimit = time.time() + t
@@ -367,7 +367,7 @@ class BrickPiInterface():
     
     #UPDATED THIS FUNCTION SINCE INTERFACE TEMPLATE WAS GIVEN
     #moves forward until a colour or an object is detected- return collisiontype
-    def move_power_untildistanceto(self, power, distanceto, deviation=0):
+    def move_power_untildistanceto(self, power, distanceto, deviation):
         if self.config['ultra'] >= DISABLED or not self.Configured:
             return 0
         self.CurrentCommand = "move_power_untildistanceto"
@@ -420,7 +420,7 @@ class BrickPiInterface():
  
     #Rotates the robot with power and degrees using the IMU sensor. Negative degrees = left.
     #the larger the number of degrees and the low the power, the more accurate
-    def rotate_power_degrees_IMU(self, power, degrees, marginoferror=3):
+    def rotate_power_degrees_IMU(self, power, degrees, marginoferror):
         if self.config['imu'] >= DISABLED or not self.Configured:
             return
         self.CurrentCommand = "rotate_power_degrees_IMU"
@@ -451,7 +451,7 @@ class BrickPiInterface():
         return elapsedtime
 
     #rotates the robot until faces targetheading - only works for a heading between 0 - 360
-    def rotate_power_heading_IMU(self, power, targetheading, marginoferror=3):
+    def rotate_power_heading_IMU(self, power, targetheading, marginoferror):
         if self.config['imu'] >= DISABLED or not self.Configured:
             return
         bp = self.BP

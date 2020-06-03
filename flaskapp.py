@@ -8,14 +8,18 @@ from datetime import datetime
 
 ROBOTENABLED = True #this can be used to disable the robot and still edit the webserver
 POWER = 30 #constant power/speed
-TPOWER = 20 #constant turning power
+RTPOWER = 20 #constant right turning power
+LTPOWER = -20 #constant left turning power
+DEVIATION = -0.5 #value accounting for motor deviations
+DISTANCETO = 20 #Stopping distance
+MOF = 3 #Turning margin of error
 
-#Global Variables
+#Server intialize
 app = Flask(__name__)
 SECRET_KEY = 'my random key can be anything' #this is used for encrypting sessions
 app.config.from_object(__name__) #Set app configuration using above SETTINGS
 
-#Create the Database
+#Connect to database
 database = DatabaseHelper('test.sqlite')
 database.set_log(app.logger) #set the logger inside the database
 
@@ -136,93 +140,159 @@ def reconfigIMU():
 #--Actuator Handlers--#
 
 #Traversal handlers
-'''
+
 @app.route('/foward', methods=['GET','POST'])#Moves robot foward
-def forward(var,var_limit):
-    message = ''
+def forward():
+    message = None    
     if ROBOTENABLED:
-        robot.move_power(POWER,-0.5) #use a second number if you need to correct a deviation
+        #Local Variables
+        distance_start = robot.get_ultra_sensor() #get ultra sensor for starting distance to obstacle
+        #results = None #don't need right now
+        #process_occurred = False #don't think i need this --> for proofing valid process occurred
+        '''
+        #Full Manual Control
+        if session[control_type] == "manual_control":
+            message = 'Manual forward.'
+            while True:
+                robot.move_power(POWER,DEVIATION) #should move forward until while loop broken, intended to be when arrorws held down, etc
+                break
+        '''
+        '''
+        #Auto Action Control --> robot moved forward until variable limit reached
+        elif session[control_type] == "auto_control"
+            message = 'Auto forward.'
+            #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime}
+            collisiondata = robot.move_power_untildistanceto(POWER, DISTANCETO, DEVIATION) #robot moves forward until object detected within specified distance
+        '''
+        ''' database stuff
+        distance_traversed = robot.get_traversed_distance(distance_start)
+        #if distance_traversed > 1: #checking if distance greater than 1 to account for invalid processes, assumed to be less than 1
+            #process_occurred = True
+        if process_occurred = True:
+            results = robot.get_all_sensors()
+            battery = results[battery]
+            colour = results[colour]
+            tir = results[thermal]
+            acceleration = results[acceleration]
+            gyro = results[gyro]
+            compass = results[compass]
+            temperature = results[temperature]
         database.ModifyQueryHelper('INSERT INTO blah blah blah', (Pram1,Pram1,Pram1)) #Database Entry
-    return
+    '''
+        message = 'Auto forward.'
+        #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime}
+        collisiondata = robot.move_power_untildistanceto(POWER, DISTANCETO, DEVIATION) #robot moves forward until object detected within specified distance
+    
+    else:
+        message = 'Robot not enabled.'
+    return jsonify({"Message" = message, "collision data": collisiondata})
 
 
 @app.route('/backwards', methods=['GET','POST'])#Moves robot backwards
-def backwards(var,var_limit):
+def backwards():
+    message = None
+    if ROBOTENABLED:
+        #Local Variables
+        distance_start = robot.get_ultra_sensor()
+        '''
+        #Full Manual Control
+        if session[control_type] == "manual_control":
+            message = 'Manual reverse.'
+            while True:
+                robot.move_power(-POWER,-DEVIATION)
+            distance_traversed = robot.get_traversed_distance(distance_start)
+        '''
+        '''
+        #Auto Action Control
+        elif session[control_type] == 'auto_control':
+            message = 'Turning around.'
+            robot.rotate_power_degrees_IMU(TPOWER, 180, MOF)
+        '''
+        message = 'Auto turning around, 180 degrees.'
+        robot.rotate_power_degrees_IMU(RTPOWER, 180, MOF) #rotates robot 180 degrees, turning around
+   
+    else:
+        message = 'Robot not enabled.'
+    return jsonify({"message" = message})
+
+
+@app.route('/t_right', methods=['GET','POST'])#Rotates robot right
+def t_right():
     message =''
     if ROBOTENABLED:
-        robot.move_power(-POWER,0.5)
-    return
+        '''
+        #Full Manual Control
+        if session[control_type] = 'manual_control':
+            message = 'Manual right turn.'
+            heading_start = robot.get_compass_IMU()
+            while True:
+                robot.rotate_power(RTPOWER)
+            heading_traversed = robot.get_rotated_heading(heading_start)
+        '''
+        '''
+        #Auto Action Control
+        elif session[control_type] == 'auto_control':
+            message = 'Auto right turn, 90 degrees.'
+            robot.rotate_power_degrees_IMU(RTPOWER, 90, MOF)
+        '''
+        message = 'Auto right turn, 90 degrees.'
+        robot.rotate_power_degrees_IMU(RTPOWER, 90, MOF)
+
+    else:
+        message = 'Robot not enabled.'
+    return jsonify({"message"= message})
 
 
-@app.route('/t.right', methods=['GET','POST'])#Rotates robot right
-def t.right():
-    message =''
-    if ROBOTENABLED:
-        robot.rotate_power(TPOWER)
-    return jsonify({"message"=message})
-
-
-@app.route('/t.left', methods=['GET','POST'])#Rotates robot left
-def t.left():
+@app.route('/t_left', methods=['GET','POST'])#Rotates robot left
+def t_left():
     message = ''
     if ROBOTENABLED:
-        robot.rotate_power(-1*TPOWER)
-    Return jsonify({"message"=message})
-'''
+        '''
+        #Full Manual Control
+        if session[control_type] == 'manual_control':
+            message = 'Manual left turn.'
+            heading_start = robot.get_compass_IMU()
+            while True:
+                robot.rotate_power(LTPOWER)
+            heading_traversed = robot.get_rotated_heading(heading_start)
+        '''
+        '''
+        #Auto Control
+        elif session[control_type] == 'auto_control':
+            message = 'Auto left turn, -90 degrees.'
+            robot.rotate_power_degrees_IMU(LTPOWER, -90, MOF)
+        '''
+        message = 'Auto left turn, -90 degrees.'
+        robot.rotate_power_degrees_IMU(LTPOWER, -90, MOF)
 
-
-#Complex movement
-@app.route('/right', methods=['GET','POST'])#Rotates 90degrees right
-def right():
-    if ROBOTENABLED:
-        robot.rotate_power_degrees_IMU(TPOWER, 90)
-        message = "90 Degree Right Turn"
-        return jsonify({"message":message})
-
-
-@app.route('/left', methods=['GET','POST'])#Rotates 90 degrees left
-def left():
-    if ROBOTENABLED:
-        robot.rotate_power_degrees_IMU(TPOWER, -90)
-        message = "90 Degree Left Turn"
-        return jsonify({"message"=message})
-
-
-@app.route('/turnaround', methods=['GET','POST'])#Rotates robot 180 degrees, turning robot around
-def turnaround():
-    if ROBOTENABLED:
-        robot.rotate_power_degrees_IMU(TPOWER, 180)
-        message = "180 Degree Turn Around"
-        return jsonify({"message"=message})
-
-
-@app.route('/reverse', methods=['GET','POST'])#Rotates robot 180 degrees, keeps moving until wall detected
-def reverse():
-    collisiondata = None
-    if ROBOTENABLED: #make sure robot is
-        robot.rotate_power_degrees_IMU(TPOWER, 180)
-        #collisiondata = {"collisiontype":collisiontype,"elapsedtime":elapsedtime} 
-        collisiondata = move_power_time(-POWER,2,0.5) #reverse
-    return jsonify({ "message":"collision detected", "collisiondata":collisiondata }) #jsonify take any type and makes a JSON
+    else:
+        message = 'Robot not enabled.'
+    return jsonify({"message"= message})
 
 
 #Claw Handlers
-'''
-@app.route('/claw.open', methods=['GET','POST'])#Opens robot claw
-def claw.open():
+
+@app.route('/claw_open', methods=['GET','POST'])#Opens robot claw
+def claw_open():
     message = ''
     if ROBOTENABLED:
-        robot.__move_claw_targetdegrees(#put in degrees needed#)
+        robot.open_claw()
+        message = 'Claw opening.'
+    else:
+        message = 'Robot not enabled.'
     return jsonify({"message":message})
 
 
 @app.route('claw.close', methods=['GET','POST'])#Closes claw
-def claw.close():
+def claw_close():
     message = ''
     if ROBOTENABLED:
-        robot.__move_claw_targetdegrees(#put in degrees needed#)
+        robot.close_claw()
+        message = 'Close claw.'
+    else:
+        message = 'Robot not enabled.'
     return jsonify({"message": message})
-'''
+
 
 
 #--Database Handlers--#
