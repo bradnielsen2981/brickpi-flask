@@ -11,7 +11,7 @@ POWER = 30 #constant power/speed
 TPOWER = 20 #constant turning power
 DEVIATION = -0.5 #value accounting for motor deviations
 DISTANCETO = 20 #Stopping distance
-MOF = 3 #Turning margin of error
+MOF = 2 #Turning margin of error
 
 #Server intialize
 app = Flask(__name__)
