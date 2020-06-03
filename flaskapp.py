@@ -283,7 +283,7 @@ def claw_open():
     return jsonify({"message": message})
 
 
-@app.route('claw.close', methods=['GET','POST'])#Closes claw
+@app.route('claw_close', methods=['GET','POST'])#Closes claw
 def claw_close():
     message = ''
     if ROBOTENABLED:
