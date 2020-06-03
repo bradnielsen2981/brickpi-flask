@@ -8,8 +8,7 @@ from datetime import datetime
 
 ROBOTENABLED = True #this can be used to disable the robot and still edit the webserver
 POWER = 30 #constant power/speed
-RTPOWER = 20 #constant right turning power
-LTPOWER = -20 #constant left turning power
+TPOWER = 20 #constant turning power
 DEVIATION = -0.5 #value accounting for motor deviations
 DISTANCETO = 20 #Stopping distance
 MOF = 3 #Turning margin of error
@@ -209,7 +208,7 @@ def backwards():
             robot.rotate_power_degrees_IMU(TPOWER, 180, MOF)
         '''
         message = 'Auto turning around, 180 degrees.'
-        robot.rotate_power_degrees_IMU(RTPOWER, 180, MOF) #rotates robot 180 degrees, turning around
+        robot.rotate_power_degrees_IMU(TPOWER, 180, MOF) #rotates robot 180 degrees, turning around
    
     else:
         message = 'Robot not enabled.'
@@ -236,7 +235,7 @@ def t_right():
             robot.rotate_power_degrees_IMU(RTPOWER, 90, MOF)
         '''
         message = 'Auto right turn, 90 degrees.'
-        robot.rotate_power_degrees_IMU(RTPOWER, 90, MOF)
+        robot.rotate_power_degrees_IMU(TPOWER, 90, MOF)
 
     else:
         message = 'Robot not enabled.'
@@ -263,7 +262,7 @@ def t_left():
             robot.rotate_power_degrees_IMU(LTPOWER, -90, MOF)
         '''
         message = 'Auto left turn, -90 degrees.'
-        robot.rotate_power_degrees_IMU(LTPOWER, 90, MOF)
+        robot.rotate_power_degrees_IMU(TPOWER, -90, MOF)
 
     else:
         message = 'Robot not enabled.'
