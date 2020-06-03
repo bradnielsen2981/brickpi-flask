@@ -185,7 +185,7 @@ def forward():
     
     else:
         message = 'Robot not enabled.'
-    return jsonify({"Message" = message, "collision data": collisiondata})
+    return jsonify({"Message":message, "collision data":collisiondata})
 
 
 @app.route('/backwards', methods=['GET','POST'])#Moves robot backwards
@@ -213,7 +213,7 @@ def backwards():
    
     else:
         message = 'Robot not enabled.'
-    return jsonify({"message" = message})
+    return jsonify({"message": message})
 
 
 @app.route('/t_right', methods=['GET','POST'])#Rotates robot right
@@ -240,7 +240,7 @@ def t_right():
 
     else:
         message = 'Robot not enabled.'
-    return jsonify({"message"= message})
+    return jsonify({"message":message})
 
 
 @app.route('/t_left', methods=['GET','POST'])#Rotates robot left
@@ -267,7 +267,7 @@ def t_left():
 
     else:
         message = 'Robot not enabled.'
-    return jsonify({"message"= message})
+    return jsonify({"message":message})
 
 
 #Claw Handlers
@@ -280,7 +280,7 @@ def claw_open():
         message = 'Claw opening.'
     else:
         message = 'Robot not enabled.'
-    return jsonify({"message":message})
+    return jsonify({"message": message})
 
 
 @app.route('claw.close', methods=['GET','POST'])#Closes claw
@@ -291,7 +291,7 @@ def claw_close():
         message = 'Close claw.'
     else:
         message = 'Robot not enabled.'
-    return jsonify({"message": message})
+    return jsonify({"message":message})
 
 
 
