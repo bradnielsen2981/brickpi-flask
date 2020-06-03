@@ -513,7 +513,7 @@ class BrickPiInterface():
 
     #log out whatever !!!!!THIS IS NOT WORKING UNLESS FLASK LOG USED, DONT KNOW WHY!!!!!
     def log(self, message):
-        self.logger.error(message)
+        self.logger.info(message)
         return
 
     #stop all motors and set command to stop
@@ -576,6 +576,7 @@ class BrickPiInterface():
 if __name__ == '__main__':
     robot = BrickPiInterface(timelimit=20)
     logger = logging.getLogger()
+    logger.setLevel(logging.info)
     robot.set_log(logger)
     robot.calibrate_imu(timelimit=10) #calibration might requirement movement
     input("Press any key to test: ")
