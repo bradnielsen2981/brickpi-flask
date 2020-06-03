@@ -263,7 +263,7 @@ def t_left():
             robot.rotate_power_degrees_IMU(LTPOWER, -90, MOF)
         '''
         message = 'Auto left turn, -90 degrees.'
-        robot.rotate_power_degrees_IMU(LTPOWER, -90, MOF)
+        robot.rotate_power_degrees_IMU(LTPOWER, 90, MOF)
 
     else:
         message = 'Robot not enabled.'
