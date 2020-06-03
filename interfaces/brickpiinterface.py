@@ -402,7 +402,7 @@ class BrickPiInterface():
         self.CurrentCommand = "stop"
         elapsedtime = time.time() - starttime
         bp.set_motor_power(self.largemotors, 0)
-        return {"collisiontype":collisiontype,"elapsedtime":elapsedtime, "elapseddistance"=elapseddistance}
+        return {"collisiontype":collisiontype,"elapsedtime":elapsedtime, "elapseddistance":elapseddistance}
 
 
     #Rotate power and time, -power to reverse
