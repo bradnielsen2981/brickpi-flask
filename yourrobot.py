@@ -20,9 +20,9 @@ class Robot(BrickPiInterface):
     def set_ports(self):
         bp = self.BP
         self.rightmotor = bp.PORT_A
-        self.leftmotor = bp.PORT_B
-        self.largemotors = bp.PORT_A + bp.PORT_B
-        self.mediummotor = bp.PORT_C
+        self.leftmotor = bp.PORT_C
+        self.largemotors = bp.PORT_A + bp.PORT_C
+        self.mediummotor = bp.PORT_B
         self.thermal = bp.PORT_1 #Thermal infrared Sensor
         self.colour = bp.PORT_2 #Colour Sensor
         self.ultra = bp.PORT_4 #ultraSonic Sensor
