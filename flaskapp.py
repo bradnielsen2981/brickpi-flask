@@ -140,7 +140,7 @@ def reconfigIMU():
 
 #Traversal handlers
 
-@app.route('/foward', methods=['GET','POST'])#Moves robot foward
+@app.route('/forward', methods=['GET','POST'])#Moves robot foward
 def forward():
     message = None    
     if ROBOTENABLED:
