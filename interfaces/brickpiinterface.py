@@ -385,7 +385,6 @@ class BrickPiInterface():
             self.log("MOVING - Distance detected: " + str(distancedetected))
             if ((self.config['ultra'] > DISABLED) or (distancedetected < distanceto and distancedetected != 0.0)): 
                 collisiontype = "objectdetected"
-                elapseddistance = startdistance - distancedetected
                 break 
 
             ##insert other tests e.g if red colour

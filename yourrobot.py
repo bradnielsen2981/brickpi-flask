@@ -116,7 +116,7 @@ class Robot(BrickPiInterface):
     #Simply rotates robot
     def rotate_power(self, power):
         self.CurrentCommand = 'rotate_power'
-        bp = self.bp
+        bp = self.BP
         bp.set_motor_power(self.rightmotor, power)#turns right motor
         bp.set_motor_power(self.leftmotor, -power)#turns left motor
         return
