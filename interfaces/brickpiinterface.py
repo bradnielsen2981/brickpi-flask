@@ -257,7 +257,7 @@ class BrickPiInterface():
         ifMutexAcquire(USEMUTEX)
         try:
             distance = bp.get_sensor(self.ultra)
-            time.sleep(0.1)
+            time.sleep(0.2)
             self.config['ultra'] = ENABLED
         except brickpi3.SensorError as error:
             self.log("ULTRASONIC: " + str(error))
