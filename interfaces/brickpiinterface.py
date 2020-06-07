@@ -530,7 +530,7 @@ class BrickPiInterface():
         return
 
     #close the claw
-    def close_claw(self, degrees=1200):
+    def close_claw(self, degrees=1100):
         self.CurrentCommand = 'close claw'
         if self.claw_closed == False:
             self.__move_claw_targetdegrees(degrees)
