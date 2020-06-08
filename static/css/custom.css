@@ -10,7 +10,41 @@ footer { margin-top:60px; }
 @keyframes blinkingText{
     0%{     color: #000;    }
     49%{    color: #000; }
-    60%{    color: transparent; }
+    60%{    color:transparent; }
     99%{    color:transparent;  }
     100%{   color: #000;    }
+}
+
+/* Origin Website Window */
+.origin{
+}
+
+/* Navigation Bar CSS */
+.navbar {/*base navbar class*/
+    position: static;
+    background-color: transparent;
+    width: 100%;
+    height: auto;
+}
+
+.navbar-button-holder {/*class for centering set of navbar buttons*/
+    width: auto;
+    height: auto;
+    background-color: transparent;
+    margin: auto;
+}
+
+.navbar-button {/*navbar button class*/
+    background-color: transparent;
+    color: black;
+    text-align: center;
+    padding: 10px 20px; /*test to find whats best*/
+    margin: 4px 2px; /*test to find whats best*/
+    border-radius: 16px; /*might need to define border as none, probably change border*/
+    cursor: pointer;    
+    transition-duration: 0.4s;
+}
+
+.navbar-button:hover {
+    background-color: white;
 }
