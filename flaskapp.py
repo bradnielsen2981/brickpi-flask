@@ -48,24 +48,79 @@ if ROBOTENABLED:
 
 @app.route('/', methods=['GET','POST']) #home page and login
 def index():
-    if 'userid' in session:
+    #Local variables
+    state = "login"
+
+    #if user is already logged in (userid in session), redirected to missioncontrol
+    '''if 'userid' in session:
         return redirect('./missioncontrol') #no form data is carried across using 'dot/'
+    '''
+    #post methods, mainly for forms
     if request.method == "POST":  #if form data has been sent
-        email = request.form['email']   #get the form field with the name 
-        password = request.form['password']
-        # TODO - need to make sure only one user is able to login at a time...
-        userdetails = database.ViewQueryHelper("SELECT * FROM users WHERE email=? AND password=?",(email,password))
-        if len(userdetails) != 0:  #rows have been found
-            row = userdetails[0] #userdetails is a list of dictionaries
-            session['userid'] = row['userid']
-            session['username'] = row['username']
-            session['permission'] = row['permission']
+        '''
+        #defines status as either login or signup
+        if request.form['form-name'] == "login-form":
+            status = "login"
+        elif request.form['form-name'] == "signup";
+            status = "signup"
+
+        #Login form
+        #if state == "login": #login form submitted
+            '''
+            '''
+            # TODO - need to make sure only one user is able to login at a time...
+            if len(session["userid"]) >= 1:
+                message = "System already being controlled, logout and try again."
+                return jsonify({"message" = message})
+            '''
+            '''
+            username = request.form['username'] #getting form fields
+            password = request.form['password']
+            userdetails = database.ViewQueryHelper("SELECT * FROM users WHERE username=? AND password=?",(username,password)) #getting user details
+            if len(userdetails) != 0:  #rows have been found where username and password match
+                row = userdetails[0] #userdetails is a list of dictionaries
+                session['userid'] = row['userid']
+            #if have time put in role/permission select statement, put roles into session (cookie) dictionary
             return redirect('./missioncontrol')
         else:
             flash("Sorry no user found, password or username incorrect")
+        '''
+        '''
+        #Signup form
+        # if state == "signup": #signup form submitted
+            #Local variables
+            active = True #activation variable for whether or not data entry committed
+            userdetails = get_all_users() #gets all user data
+            row = userdetails[0] #sets row as user data
+
+            #processing signup form data fields
+            name = request.form['name']
+            surname = request.form['surname']
+            username = request.form['username']
+            password = request.form['password']
+            password_confirm = request.form['password_confirm']
+            
+
+            #checking if password and password confirmation match
+            if password != password_confirm:
+                status = False
+                return jsonify{"message":message}
+
+            #checking if username/account already taken
+            if username == row['username']:
+                message = "Username is already taken, please enter a different username."
+                status = False
+                return jsonify{"message":message}
+
+            #new user database entry/puts in user roles
+            if status == True:
+                new_user_entry()
+                user_role_entry()
+            
     else:
         flash("No data submitted")
-    return render_template('index.html')
+    '''
+    return render_template('home.html')
 
 
 @app.route('/missioncontrol') #mission control

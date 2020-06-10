@@ -36,10 +36,10 @@ footer { margin-top:60px; }
 
 .navbar-button {/*navbar button class*/
     background-color: transparent;
-    color: black;
+    color: white;
     text-align: center;
     padding: 10px 20px; /*test to find whats best*/
-    margin: 4px 2px; /*test to find whats best*/
+    margin: 20px 20px; /*test to find whats best*/
     border-radius: 16px; /*might need to define border as none, probably change border*/
     cursor: pointer;    
     transition-duration: 0.4s;
@@ -47,4 +47,174 @@ footer { margin-top:60px; }
 
 .navbar-button:hover {
     background-color: white;
+    color: black;
+}
+
+/* Home Page CSS */
+/* Login CSS */
+.login-container{
+    width: auto;
+    height: auto;
+    border-radius: 15px;
+    padding: 20px 20px 20px 20px;
+    margin: auto;
+    background-color: white; /*#979c9c; possible grey color for form container background*/
+}
+
+.login-header-container h2{
+    margin: auto;
+    color: white;
+    text-align: center;  
+    padding: 0 0 30px 0;
+    font-size: 20px;
+}
+
+.login-form {
+    margin: auto;
+    width: auto;
+    height: auto;
+}
+
+.login-form label {
+    margin: 10px 10px 0px 10px;
+    text-align:left;
+}
+
+.login-form input {
+    width: 40%;
+    margin: 10px 10px 10px 10px;
+    border-radius: 12px;
+    padding: 15px;
+    text-align: left;
+}
+
+.login-form input:focus {
+    border: 1px black;
+}
+
+.login-form button {
+    border-radius: 18px;
+    background-color: #3deb6b;
+    color: white;
+    opacity: 0.75;
+    margin: 20px;
+    left: 50%;
+    transform: translate(-50%, 0);
+}
+
+.login-form button:hover {
+    opacity: 1;
+}
+
+.login-instructions-container p {
+    text-align: left;
+    color: black;
+    margin: 20px;
+}
+
+.create-account-button {
+    display: inline;
+    color: blue;
+}
+
+.create-account-button:hover {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: blue;
+}
+
+/* Signup CSS*/
+.modal{
+    display: none;
+    position: fixed;
+    z-index: 1;
+    opacity: 0.75;
+    filter: blur(2px);
+    transition-duration: 0.6s;
+}
+
+.close{
+    position: absolute;
+    right: 35px;
+    top: 15px;
+    font-size: 40px;
+    font-weight: bold;
+    color: #f1f1f1;
+}
+
+.close:hover, .close:focus{
+    color: #f44336;
+    cursor: pointer;
+}
+
+.signup-container{
+    width: auto;
+    height: auto;
+    margin: auto;
+    border-radius: 15px;
+    background-color: white;
+    padding: 20px 20px 20px 20px;
+}
+
+.signup-header-container{
+    text-align: center;
+    color: black;
+    margin: 0 0 30px 0;
+    font-size: 20px;
+}
+
+.signup-instructions-container{
+    text-align: left;
+    margin: 0 10 10 0;
+}
+
+.signup-form{
+    overflow: auto;
+    width: auto;
+    height: auto;
+    margin: auto;
+}
+
+.signup-form label{
+    margin: 10px 10px 0px 10px;
+    text-align:left;
+}
+
+.signup-form input{
+    width: 40%;
+    margin: 10px 10px 10px 10px;
+    border-radius: 12px;
+    padding: 15px;
+    text-align: left;
+}
+
+.signup-form input:focus{
+    border: 1px black;
+}
+
+.user-select-container{
+    padding: 10px;
+    margin: 0 auto 0 auto;
+}
+
+.signup-form-button-container{
+    margin: 10px;
+    width: auto;
+    color: white;
+    opacity: 0.75;
+    transition-duration: 0.2s;
+}
+
+.signup-cancel-button {
+    float: left;
+    width: 50%;
+    background-color: #f44336;
+}
+
+.signup-submit-button {
+    background-color: #3deb6b;
+}
+
+.signup-cancel-button:hover, .signup-submit-button:hover{
+    opacity: 1;
 }

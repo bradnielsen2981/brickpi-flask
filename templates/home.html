@@ -1,18 +1,73 @@
 {% extends "layout.html" %}
-{% block scripts %}
-{% endblock %}
+
+<!-- Main website html -->
 {% block content %}
-<h2>Login</h2>
-<div class="container">
-    <form action="/" method="POST">
-        Email:<br>
-        <input type="email" name="email" value="" required>
-        <br>
-        Password:<br>
-        <input type="password" name="password" value="" required>
-        <br><br>
-        <input type="submit" value="Submit">
-        <p>If you click the "Submit" button, the form-data will be sent to the form action. Default is Email is <b>'admin@admin'</b> and Password is <b>'admin'</b>.</p>
+<!--Login-->
+<div class="login-container"><!--box containing login stuff-->
+    <div class="login-header-container"><!--container for login header-->
+        <h2>Login</h2>
+    </div>
+    <form class="login-form" id="login-form" action="/" method="POST">
+        <label for="username">Username:</label>
+        <input type="text" name="username" value="" placeholder="Please enter username" required>
+        <label for="password">Password:</label>
+        <input type="password" name="password" value="" placeholer="Please enter password" required>
+        <button type="submit" id="login-form">Login</button>
+        <input type="hidden" name="form-name" value="login-form">
     </form>
+    <div class="login-instructions-container"><!--login message/instructions/information container-->
+        <p>
+            Please log in to access the LegoFire robot system.<br>
+            Upon logging in you will be redirected to Mission Control.<br>
+            If you do not have an account, please click here to <button type="button" class="create-account-button" onclick="docuement.getElementByID('signup').style.display='block'">create account</button> .
+        </p>
+        <!--original msg<p>If you click the "Submit" button, the form-data will be sent to the form action. Default is Email is <b>'admin@admin'</b> and Password is <b>'admin'</b>.</p>-->
+    </div>
 </div>
+
+<!--SignUp-->
+<div id="signup" class='modal'><!--box containing signup stuff-->
+    <span onclick="document.getElementByID('signup').style.display='none'" class="close" title="Close Modal">times;</span>
+    <div class="signup-container">
+        <div class="signup-header-container">
+            Sign Up
+        </div>
+        <div class="signup-instructions-container">
+            To create an account, please complete this form.
+        </div>
+        <form class="signup-form" id="signup-form" action="/" method="POST">
+            <label for="name">Firstname:</label>
+            <input type="text" name="name" value='' placeholder="Please enter your first name" required>
+            <label for="surname">Surname:</label>
+            <input type="text" name="surname" value='' placeholder="Please enter your surname" required>
+            <label for="username">Username:</label>
+            <input type="text" name="username" value='' placeholder="Please enter desired username" required>
+            <label for="password">Password:</label>
+            <input type="password" name="password" value='' placeholder="Please enter your password" required>
+            <label for="password_confirm">Confirm Password:</label>
+            <input type="password" name="password_confirm" value='' placeholder="Please confirm password" required>
+            <label>User Roles:</label>
+            <div class="userrole-select-container">
+                <input type="checkbox" name="role_firefighter" value=0>
+                <label for="role_firefighter">Firefighter</label>
+                <input type="checkbox" name="role_investigator" value=0>
+                <label for="role_investigator">Investigator</label>
+                <input type="checkbox" name="role_admin" value=0>
+                <label for="role_admin">Admin</label>
+            </div>
+            <div class="signup-form-button-container"><!--might need to use a clearfix div if appearance messes up-->
+                <button type="button" onclick="document.getElementByID('signup').style.display='none'" class='signup-cancel-button'>Cancel</button>
+                <button type="submit" id="signup-form" class="signup-signup-button">Sign Up</button>
+            </div>
+            <input type="hidden" name="form-name" value="signup-form">
+        </form>   
+    </div>
+</div>
+{% endblock %}
+
+<!-- Scripts -->
+{% block scripts %}
+<script src="/static.scripts/home.js"></script>
+<script src="/static/scripts/hsv.js"></script>
+<script src="/static/scripts/pen.js"></script>
 {% endblock %}
