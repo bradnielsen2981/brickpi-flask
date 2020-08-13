@@ -105,7 +105,7 @@ def start():
 @app.route('/getallusers', methods=['GET','POST'])
 def getallusers():
     results = database.ViewQueryHelper("SELECT * FROM users")
-    return jsonify([dict(row) for row in results]) #jsonify doesnt work with an SQLite.Row
+    return jsonify(results) #jsonify doesnt work with an SQLite.Row
 
 #Get the current command from brickpiinterface.py
 @app.route('/getcurrentcommand', methods=['GET','POST'])
